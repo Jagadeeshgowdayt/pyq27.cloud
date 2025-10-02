@@ -357,43 +357,47 @@ class QuestionPaperManager {
         }
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading to cloud...';
 
         try {
             let uploadedCount = 0;
 
             if (this.groupedFiles && Object.keys(this.groupedFiles).length > 0) {
-                // Bulk upload mode
+                // Bulk upload mode with Supabase Storage
                 for (const [key, paperData] of Object.entries(this.groupedFiles)) {
-                    const pages = [];
+                    const paperId = Date.now() + uploadedCount;
+                    const folderPath = `papers/${paperId}`;
                     
-                    for (const fileData of paperData.files) {
-                        const base64 = await this.fileToBase64(fileData.file);
-                        pages.push({
-                            name: fileData.file.name,
-                            data: base64,
-                            size: fileData.file.size,
-                            pageNo: fileData.pageNo
-                        });
-                    }
+                    // Upload all files to Supabase Storage
+                    const fileDataArray = paperData.files.map(f => f.file);
+                    const imageUrls = await storageManager.uploadMultipleImages(fileDataArray, folderPath);
+                    
+                    const pages = imageUrls.map((url, index) => ({
+                        name: paperData.files[index].file.name,
+                        data: url, // Store URL instead of base64
+                        size: paperData.files[index].file.size,
+                        pageNo: paperData.files[index].pageNo,
+                        storagePath: `${folderPath}/page_${index + 1}_${Date.now()}.${paperData.files[index].file.name.split('.').pop()}`
+                    }));
 
                     const paper = {
-                        id: Date.now() + uploadedCount,
+                        id: paperId,
                         subject: paperData.subject,
                         school: paperData.school,
                         pages: pages,
                         uploadDate: new Date().toISOString(),
-                        totalPages: pages.length
+                        totalPages: pages.length,
+                        storageType: 'supabase' // Mark as cloud storage
                     };
 
                     this.papers.push(paper);
                     uploadedCount++;
                 }
 
-                alert(`✅ Successfully uploaded ${uploadedCount} question paper(s)!`);
+                alert(`✅ Successfully uploaded ${uploadedCount} question paper(s) to cloud storage!`);
                 
             } else {
-                // Manual upload mode
+                // Manual upload mode with Supabase Storage
                 const subject = document.getElementById('paperSubject').value.trim();
                 const school = document.getElementById('paperSchool').value.trim();
 
@@ -404,27 +408,31 @@ class QuestionPaperManager {
                     return;
                 }
 
-                const pages = [];
-                for (const file of files) {
-                    const base64 = await this.fileToBase64(file);
-                    pages.push({
-                        name: file.name,
-                        data: base64,
-                        size: file.size
-                    });
-                }
+                const paperId = Date.now();
+                const folderPath = `papers/${paperId}`;
+                
+                // Upload all files to Supabase Storage
+                const imageUrls = await storageManager.uploadMultipleImages(files, folderPath);
+                
+                const pages = imageUrls.map((url, index) => ({
+                    name: files[index].name,
+                    data: url, // Store URL instead of base64
+                    size: files[index].size,
+                    storagePath: `${folderPath}/page_${index + 1}_${Date.now()}.${files[index].name.split('.').pop()}`
+                }));
 
                 const paper = {
-                    id: Date.now(),
+                    id: paperId,
                     subject: subject,
                     school: school.toUpperCase(),
                     pages: pages,
                     uploadDate: new Date().toISOString(),
-                    totalPages: pages.length
+                    totalPages: pages.length,
+                    storageType: 'supabase' // Mark as cloud storage
                 };
 
                 this.papers.push(paper);
-                alert(`✅ Successfully uploaded ${paper.totalPages} page(s) for ${subject}!`);
+                alert(`✅ Successfully uploaded ${paper.totalPages} page(s) for ${subject} to cloud storage!`);
             }
 
             this.savePapers();
@@ -452,6 +460,7 @@ class QuestionPaperManager {
     }
 
     savePapers() {
+        // Save paper metadata to localStorage (URLs, not base64 images)
         localStorage.setItem('questionPapers', JSON.stringify(this.papers));
     }
 

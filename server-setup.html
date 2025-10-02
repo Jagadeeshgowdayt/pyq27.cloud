@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Server Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .code-block {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Question Paper Website - Local Server Setup</h1>
+    
+    <div class="warning">
+        <strong>Note:</strong> This website works perfectly when opened directly in your browser. You only need a local server if you encounter any file loading issues.
+    </div>
+
+    <h2>Quick Start (No Server Required)</h2>
+    <div class="success">
+        <strong>Recommended:</strong> Simply open <code>index.html</code> directly in your web browser. All features will work perfectly!
+    </div>
+
+    <h2>Optional: Local Server Setup</h2>
+    
+    <h3>Method 1: Python Server (if Python is installed)</h3>
+    <div class="code-block">
+        <strong>For Python 3:</strong><br>
+        python -m http.server 8000
+    </div>
+    <div class="code-block">
+        <strong>For Python 2:</strong><br>
+        python -m SimpleHTTPServer 8000
+    </div>
+    <p>Then open: <a href="http://localhost:8000">http://localhost:8000</a></p>
+
+    <h3>Method 2: Node.js Server (if Node.js is installed)</h3>
+    <div class="code-block">
+        npx http-server -p 8000
+    </div>
+    <p>Then open: <a href="http://localhost:8000">http://localhost:8000</a></p>
+
+    <h3>Method 3: Live Server (VS Code Extension)</h3>
+    <ol>
+        <li>Install "Live Server" extension in VS Code</li>
+        <li>Right-click on <code>index.html</code></li>
+        <li>Select "Open with Live Server"</li>
+    </ol>
+
+    <h2>Features Available</h2>
+    <ul>
+        <li>✅ Upload and manage question papers</li>
+        <li>✅ Multi-page document viewer</li>
+        <li>✅ Search and filter functionality</li>
+        <li>✅ Mobile-responsive design</li>
+        <li>✅ Download protection</li>
+        <li>✅ Admin panel with password protection</li>
+    </ul>
+
+    <h2>Default Admin Password</h2>
+    <div class="warning">
+        <strong>Default Password:</strong> admin123<br>
+        <strong>Important:</strong> Change this password in <code>js/main.js</code> before deploying!
+    </div>
+
+    <h2>File Structure</h2>
+    <div class="code-block">
+QP-U-WEBSITE/
+├── index.html          # Main website
+├── server-setup.html   # This file
+├── css/
+│   ├── styles.css      # Main styles
+│   └── protection.css  # Security styles
+├── js/
+│   └── main.js         # Application logic
+├── data/               # Data storage
+└── README.md          # Documentation
+    </div>
+
+    <div class="success">
+        <strong>Ready to use!</strong> Click <a href="index.html">here to open your Question Paper Website</a>
+    </div>
+
+    <script>
+        // Auto-redirect after 5 seconds
+        setTimeout(() => {
+            if (confirm("Ready to open your Question Paper Website?")) {
+                window.location.href = "index.html";
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

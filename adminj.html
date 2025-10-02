@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Question Papers</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-storage.js"></script>
+    <style>
+        body {
+            background: #111;
+            color: #00FF41;
+            font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        /* Login Screen Styles */
+        .cmd-login {
+            background: #111;
+            border: 2px solid #00FF41;
+            box-shadow: 0 0 32px #00FF4160;
+            padding: 48px 32px 32px 32px;
+            width: 100%;
+            max-width: 420px;
+            font-size: 1.1rem;
+        }
+
+        .cmd-title {
+            color: #00FF41;
+            font-size: 1.3rem;
+            margin-bottom: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .cmd-line {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .cmd-label {
+            color: #00FF41;
+            margin-right: 8px;
+            font-family: inherit;
+        }
+
+        .cmd-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #00FF41;
+            color: #00FF41;
+            font-family: inherit;
+            font-size: 1.1rem;
+            outline: none;
+            width: 180px;
+            letter-spacing: 2px;
+            padding: 2px 4px;
+        }
+
+        .cmd-input:focus {
+            background: #181;
+        }
+
+        .cmd-btn {
+            background: #111;
+            color: #00FF41;
+            border: 1px solid #00FF41;
+            font-family: inherit;
+            font-size: 1.1rem;
+            padding: 6px 18px;
+            margin-left: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .cmd-btn:hover {
+            background: #181;
+        }
+
+        .cmd-error {
+            color: #FF4141;
+            background: #1a0000;
+            border-left: 3px solid #FF4141;
+            padding: 8px 12px;
+            margin-bottom: 18px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .cmd-cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background: #00FF41;
+            margin-left: 2px;
+            animation: blink 1s steps(1) infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .cmd-back {
+            color: #00FF41;
+            text-decoration: underline;
+            font-size: 0.95rem;
+            margin-top: 24px;
+            display: inline-block;
+        }
+
+        .cmd-back:hover {
+            color: #fff;
+        }
+
+        /* Admin Panel Styles */
+        .admin-container {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .admin-header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .admin-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: #f0f4ff;
+            transform: translateX(-5px);
+        }
+
+        .logout-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c53030;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-card i {
+            font-size: 36px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .stat-card .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-card .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: #f8f9ff;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .upload-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .format-info {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .format-info h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px auto 0;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+        }
+
+        .papers-list {
+            margin-top: 30px;
+        }
+
+        .papers-list h2 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .paper-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .paper-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .paper-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .paper-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c53030;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                padding: 20px;
+            }
+
+            .admin-header h1 {
+                font-size: 24px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .paper-item {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .header-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="cmd-login" id="loginScreen">
+        <div class="cmd-title">PYQ 27 CLOUD Admin Login</div>
+        <form id="loginForm" autocomplete="off" style="margin-bottom:0;">
+            <div class="cmd-line">
+                <span class="cmd-label">Enter password:</span>
+                <input type="password" id="passwordInput" class="cmd-input" autofocus required autocomplete="off">
+                <span class="cmd-cursor"></span>
+                <button type="submit" class="cmd-btn">Login</button>
+            </div>
+            <div id="errorMessage" class="cmd-error" style="display:none;">Incorrect password. Try again.</div>
+        </form>
+        <a href="index.html" class="cmd-back">&lt; Back to Main Site</a>
+    </div>
+
+    <!-- Admin Panel (Hidden by default) -->
+    <div class="admin-container" id="adminPanel">
+        <div class="header-actions">
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i>
+                Back to Main Site
+            </a>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+        </div>
+
+        <div class="admin-header">
+            <h1>
+                <i class="fas fa-shield-alt"></i>
+                Admin Panel
+            </h1>
+            <p>Manage your question paper collection</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <i class="fas fa-book"></i>
+                <div class="stat-number" id="totalPapers">0</div>
+                <div class="stat-label">Total Papers</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-file-image"></i>
+                <div class="stat-number" id="totalPages">0</div>
+                <div class="stat-label">Total Pages</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-graduation-cap"></i>
+                <div class="stat-number" id="totalSubjects">0</div>
+                <div class="stat-label">Subjects</div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2>
+                <i class="fas fa-cloud-upload-alt"></i>
+                Upload Question Papers
+            </h2>
+
+            <div class="format-info">
+                <h3>
+                    <i class="fas fa-info-circle"></i>
+                    Bulk Upload Format
+                </h3>
+                <p><strong>Filename Format:</strong> <code>SubjectName_School_PageNo.extension</code></p>
+                <p><strong>Examples:</strong></p>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li><code>computer_networks_socse_1.jpeg</code></li>
+                    <li><code>data_structures_socs_2.png</code></li>
+                    <li><code>organic_chemistry_socs_1.jpg</code></li>
+                </ul>
+                <p style="margin-top: 10px;"><strong>Schools:</strong> SOCSE, SOBS, SOME, SOECE, SOCS, SOPS, SOMS, SOBT</p>
+            </div>
+
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-images"></i>
+                        Select Question Paper Images
+                    </label>
+                    <input type="file" id="paperFiles" accept="image/*" multiple required>
+                </div>
+
+                <div class="form-group">
+                    <label for="paperSubject">
+                        <i class="fas fa-book"></i>
+                        Subject Name (for manual upload)
+                    </label>
+                    <input type="text" id="paperSubject" placeholder="e.g., Computer Networks">
+                </div>
+
+                <div class="form-group">
+                    <label for="paperSchool">
+                        <i class="fas fa-university"></i>
+                        School Code (for manual upload)
+                    </label>
+                    <select id="paperSchool">
+                        <option value="">Select School</option>
+                        <option value="SOCSE">SOCSE - School of Computer Science & Engineering</option>
+                        <option value="SOBS">SOBS - School of Basic Sciences</option>
+                        <option value="SOME">SOME - School of Mechanical Engineering</option>
+                        <option value="SOECE">SOECE - School of Electronics & Communication</option>
+                        <option value="SOCS">SOCS - School of Chemical Sciences</option>
+                        <option value="SOPS">SOPS - School of Physical Sciences</option>
+                        <option value="SOMS">SOMS - School of Management Studies</option>
+                        <option value="SOBT">SOBT - School of Bio-Technology</option>
+                    </select>
+                </div>
+
+                <div class="preview-container" id="previewContainer"></div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-upload"></i>
+                    Upload Papers
+                </button>
+            </form>
+        </div>
+
+        <!-- Existing Papers -->
+        <div class="papers-list">
+            <h2>
+                <i class="fas fa-list"></i>
+                Existing Papers
+            </h2>
+            <div id="papersList"></div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        // ============================================
+        // PASSWORD PROTECTION
+        // ============================================
+        const ADMIN_PASSWORD = "admin@123"; // ⚠️ CHANGE THIS PASSWORD!
+        const SESSION_KEY = "adminAuthenticated";
+        const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+        // Check if already authenticated
+        function checkAuth() {
+            const authData = localStorage.getItem(SESSION_KEY);
+            if (authData) {
+                try {
+                    const { timestamp } = JSON.parse(authData);
+                    const now = Date.now();
+                    
+                    if (now - timestamp < SESSION_TIMEOUT) {
+                        showAdminPanel();
+                        return true;
+                    } else {
+                        localStorage.removeItem(SESSION_KEY);
+                    }
+                } catch (e) {
+                    localStorage.removeItem(SESSION_KEY);
+                }
+            }
+            return false;
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('passwordInput').value;
+            const errorMsg = document.getElementById('errorMessage');
+            
+            if (password === ADMIN_PASSWORD) {
+                // Correct password
+                localStorage.setItem(SESSION_KEY, JSON.stringify({
+                    timestamp: Date.now()
+                }));
+                
+                showAdminPanel();
+                document.getElementById('passwordInput').value = '';
+            } else {
+                // Wrong password
+                errorMsg.classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+                
+                setTimeout(() => {
+                    errorMsg.classList.remove('show');
+                }, 3000);
+            }
+        });
+
+        function showAdminPanel() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            
+            setTimeout(() => {
+                updateStats();
+                renderPapersList();
+            }, 100);
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem(SESSION_KEY);
+                location.reload();
+            }
+        }
+
+        // Session timeout check
+        setInterval(() => {
+            const authData = localStorage.getItem(SESSION_KEY);
+            if (authData) {
+                try {
+                    const { timestamp } = JSON.parse(authData);
+                    const elapsed = Date.now() - timestamp;
+                    const remaining = SESSION_TIMEOUT - elapsed;
+                    
+                    if (remaining <= 0) {
+                        alert('Session expired. Please login again.');
+                        localStorage.removeItem(SESSION_KEY);
+                        location.reload();
+                    }
+                } catch (e) {
+                    // Invalid data
+                }
+            }
+        }, 60000); // Check every minute
+
+        // ============================================
+        // ADMIN PANEL FUNCTIONS
+        // ============================================
+        
+        function updateStats() {
+            if (typeof paperManager !== 'undefined' && paperManager.papers) {
+                const papers = paperManager.papers;
+                document.getElementById('totalPapers').textContent = papers.length;
+                
+                const totalPages = papers.reduce((sum, paper) => sum + paper.totalPages, 0);
+                document.getElementById('totalPages').textContent = totalPages;
+                
+                const subjects = new Set(papers.map(p => p.subject));
+                document.getElementById('totalSubjects').textContent = subjects.size;
+            }
+        }
+
+        function renderPapersList() {
+            if (typeof paperManager === 'undefined' || !paperManager.papers) return;
+            
+            const container = document.getElementById('papersList');
+            const papers = paperManager.papers;
+
+            if (papers.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-inbox" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
+                        <p>No papers uploaded yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = papers.map(paper => `
+                <div class="paper-item">
+                    <div class="paper-info">
+                        <h3>${paper.subject}</h3>
+                        <p>
+                            <i class="fas fa-university"></i> ${paper.school || 'N/A'} | 
+                            <i class="fas fa-file-image"></i> ${paper.totalPages} page(s) | 
+                            <i class="fas fa-calendar"></i> ${new Date(paper.uploadDate).toLocaleDateString()}
+                        </p>
+                    </div>
+                    <button class="delete-btn" onclick="deletePaper(${paper.id})">
+                        <i class="fas fa-trash"></i>
+                        Delete
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function deletePaper(paperId) {
+            if (!confirm('Are you sure you want to delete this paper?')) return;
+            
+            if (typeof paperManager !== 'undefined') {
+                paperManager.papers = paperManager.papers.filter(p => p.id !== paperId);
+                paperManager.savePapers();
+                paperManager.renderPapers();
+                paperManager.populateFilters();
+                renderPapersList();
+                updateStats();
+                alert('✅ Paper deleted successfully!');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+        });
+
+        // Override handleUpload to update stats after upload
+        if (typeof QuestionPaperManager !== 'undefined') {
+            const originalHandleUpload = QuestionPaperManager.prototype.handleUpload;
+            QuestionPaperManager.prototype.handleUpload = async function(event) {
+                await originalHandleUpload.call(this, event);
+                updateStats();
+                renderPapersList();
+            };
+        }
+    </script>
+</body>
+</html>

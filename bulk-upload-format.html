@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Upload Format Examples</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .format-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .format-structure {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .part {
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+        }
+        .subject { background: #667eea; }
+        .school { background: #48bb78; }
+        .page { background: #f59e0b; }
+        .extension { background: #e53e3e; }
+        .separator { color: #333; font-size: 24px; }
+        
+        .examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .example {
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+        .example.valid {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .example.invalid {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .example code {
+            display: block;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .legend {
+            background: #fff8dc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .legend-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            margin-right: 15px;
+        }
+        .school-codes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .school-code {
+            background: #e6f7ff;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .school-code strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📁 Bulk Upload Filename Format</h1>
+        
+        <div class="format-box">
+            <h2>Format Structure</h2>
+            <div class="format-structure">
+                <div class="part subject">SubjectName</div>
+                <div class="separator">_</div>
+                <div class="part school">School</div>
+                <div class="separator">_</div>
+                <div class="part page">PageNo</div>
+                <div class="separator">.</div>
+                <div class="part extension">ext</div>
+            </div>
+            
+            <div class="legend">
+                <h3>Component Breakdown:</h3>
+                <div class="legend-item">
+                    <div class="legend-color subject"></div>
+                    <div>
+                        <strong>Subject Name:</strong> Use underscores for spaces<br>
+                        <small>Example: computer_networks, data_structures</small>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color school"></div>
+                    <div>
+                        <strong>School Code:</strong> Department abbreviation<br>
+                        <small>Example: SOCSE, SOBS, SOME</small>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color page"></div>
+                    <div>
+                        <strong>Page Number:</strong> Must be numeric<br>
+                        <small>Example: 1, 2, 3, 4...</small>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color extension"></div>
+                    <div>
+                        <strong>Extension:</strong> Image file type<br>
+                        <small>Supported: .jpeg, .jpg, .png, .gif, .webp</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>✅ Valid Examples</h2>
+        <div class="examples">
+            <div class="example valid">
+                <span class="icon">✅</span><strong>Perfect Format</strong>
+                <code>computer_networks_socse_1.jpeg</code>
+                <small>Subject: Computer Networks<br>School: SOCSE<br>Page: 1</small>
+            </div>
+            <div class="example valid">
+                <span class="icon">✅</span><strong>Multi-word Subject</strong>
+                <code>operating_systems_socs_1.png</code>
+                <small>Subject: Operating Systems<br>School: SOCS<br>Page: 1</small>
+            </div>
+            <div class="example valid">
+                <span class="icon">✅</span><strong>Long Subject Name</strong>
+                <code>data_structures_and_algorithms_socse_2.jpg</code>
+                <small>Subject: Data Structures And Algorithms<br>School: SOCSE<br>Page: 2</small>
+            </div>
+            <div class="example valid">
+                <span class="icon">✅</span><strong>Different Extension</strong>
+                <code>thermodynamics_soms_3.png</code>
+                <small>Subject: Thermodynamics<br>School: SOMS<br>Page: 3</small>
+            </div>
+        </div>
+
+        <h2>❌ Invalid Examples</h2>
+        <div class="examples">
+            <div class="example invalid">
+                <span class="icon">❌</span><strong>Missing School</strong>
+                <code>computer_networks_1.jpeg</code>
+                <small>Error: School code is missing</small>
+            </div>
+            <div class="example invalid">
+                <span class="icon">❌</span><strong>Missing Page Number</strong>
+                <code>computer_networks_socse.jpeg</code>
+                <small>Error: Page number is required</small>
+            </div>
+            <div class="example invalid">
+                <span class="icon">❌</span><strong>Wrong Separator</strong>
+                <code>computer-networks-socse-1.jpeg</code>
+                <small>Error: Use underscores, not dashes</small>
+            </div>
+            <div class="example invalid">
+                <span class="icon">❌</span><strong>Non-numeric Page</strong>
+                <code>computer_networks_socse_one.jpeg</code>
+                <small>Error: Page must be a number (1, 2, 3...)</small>
+            </div>
+        </div>
+
+        <h2>🏫 Common School Codes</h2>
+        <div class="school-codes">
+            <div class="school-code">
+                <strong>SOCSE</strong><br>
+                <small>Computer Science & Engineering</small>
+            </div>
+            <div class="school-code">
+                <strong>SOBS</strong><br>
+                <small>Basic Sciences</small>
+            </div>
+            <div class="school-code">
+                <strong>SOME</strong><br>
+                <small>Mechanical Engineering</small>
+            </div>
+            <div class="school-code">
+                <strong>SOECE</strong><br>
+                <small>Electronics & Communication</small>
+            </div>
+            <div class="school-code">
+                <strong>SOCS</strong><br>
+                <small>Chemical Sciences</small>
+            </div>
+            <div class="school-code">
+                <strong>SOPS</strong><br>
+                <small>Physical Sciences</small>
+            </div>
+            <div class="school-code">
+                <strong>SOMS</strong><br>
+                <small>Mathematical Sciences</small>
+            </div>
+            <div class="school-code">
+                <strong>SOBT</strong><br>
+                <small>Biotechnology</small>
+            </div>
+        </div>
+
+        <h2>📚 Multi-Page Example</h2>
+        <div class="format-box">
+            <p><strong>Scenario:</strong> You have a 3-page Computer Networks question paper from SOCSE</p>
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <code style="display: block; margin: 5px 0;">📄 computer_networks_socse_1.jpeg</code>
+                <code style="display: block; margin: 5px 0;">📄 computer_networks_socse_2.jpeg</code>
+                <code style="display: block; margin: 5px 0;">📄 computer_networks_socse_3.jpeg</code>
+            </div>
+            <p>✨ <strong>Result:</strong> These will automatically group into ONE question paper with 3 pages!</p>
+        </div>
+
+        <h2>🚀 Quick Start</h2>
+        <div class="format-box" style="background: #d4edda; border-color: #c3e6cb;">
+            <h3>Steps to Bulk Upload:</h3>
+            <ol style="line-height: 2;">
+                <li>📝 Rename your files using the format: <code>subject_school_page.jpeg</code></li>
+                <li>🔐 Click "Admin Upload" and enter password</li>
+                <li>📁 Select all your renamed files at once</li>
+                <li>👀 Review the preview (system auto-groups them)</li>
+                <li>✅ Click "Upload Paper"</li>
+                <li>🎉 Done! All papers uploaded with correct metadata!</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <h3>📖 Need More Help?</h3>
+            <p>Check out <strong>BULK_UPLOAD_GUIDE.md</strong> for complete documentation</p>
+            <a href="index.html" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; margin-top: 10px;">
+                Go to Upload Page →
+            </a>
+        </div>
+    </div>
+</body>
+</html>

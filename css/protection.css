@@ -1,0 +1,104 @@
+/* Enhanced Protection Styles */
+
+/* Disable image saving completely */
+img {
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+}
+
+/* Hide elements during print */
+@media print {
+    .image-container img,
+    .paper-card img,
+    #currentImage {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    .image-container::after {
+        content: "Printing not allowed";
+        display: block;
+        text-align: center;
+        padding: 50px;
+        font-size: 24px;
+        color: #333;
+    }
+}
+
+/* Disable highlighting and selection */
+* {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection only for input fields */
+input, textarea, select {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+/* Additional protection overlay for images */
+.image-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    background: transparent;
+    pointer-events: auto;
+}
+
+/* Disable save shortcuts */
+.no-save {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Hide scrollbars that might reveal image dimensions */
+.image-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.image-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Prevent drag operations */
+[draggable="false"] {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Disable selection on all content */
+.protected-content {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    user-drag: none;
+}

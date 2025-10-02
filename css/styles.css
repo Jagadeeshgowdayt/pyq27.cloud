@@ -1,0 +1,924 @@
+/* ===================================
+   LATE NIGHT STUDY SESSION THEME
+   Dark, Focused, Minimalist Design
+   Performance Optimized
+   =================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:wght@300;400;700&display=swap');
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #111827;
+    color: #E5E7EB;
+    line-height: 1.7;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header - Dark & Minimal */
+.header {
+    background: #1A1A1D;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.08);
+    padding: 48px 0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.header .container {
+    display: block;
+}
+
+.header h1 {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 32px;
+    font-weight: 300;
+    margin-bottom: 32px;
+    text-align: center;
+    color: #F5F5DC;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+}
+
+.header h1 i {
+    font-size: 32px;
+    color: #FFD700;
+    opacity: 0.9;
+}
+
+/* Search Bar - Glowing Effect */
+.search-container {
+    display: flex;
+    max-width: 720px;
+    margin: 0 auto;
+    gap: 12px;
+}
+
+.search-container input {
+    flex: 1;
+    padding: 16px 28px;
+    background: rgba(26, 26, 29, 0.7);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 10px;
+    font-size: 15px;
+    color: #F5F5DC;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+.search-container input::placeholder {
+    color: #9CA3AF;
+}
+
+.search-container input:focus {
+    border-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.12);
+    background: rgba(26, 26, 29, 0.95);
+}
+
+.search-container button {
+    padding: 16px 36px;
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+.search-container button:hover {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+/* Main Content - Spacious */
+.main-content {
+    padding: 72px 0;
+    min-height: 70vh;
+}
+
+/* Filters - Subtle */
+.filters {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 64px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.filters select {
+    padding: 13px 28px;
+    background: rgba(26, 26, 29, 0.7);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #F5F5DC;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+.filters select:hover {
+    border-color: rgba(255, 215, 0, 0.3);
+    background: rgba(26, 26, 29, 0.9);
+}
+
+.filters select:focus {
+    outline: none;
+    border-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.12);
+}
+
+.filters select option {
+    background: #1A1A1D;
+    color: #F5F5DC;
+}
+
+/* Papers Grid - Clean Layout */
+.papers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 36px;
+}
+
+/* Paper Card - Dark with Soft Glow */
+.paper-card {
+    background: rgba(26, 26, 29, 0.5);
+    border-radius: 14px;
+    padding: 32px;
+    border: 1px solid rgba(255, 215, 0, 0.08);
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: visible;
+}
+
+.paper-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 215, 0, 0.25);
+    box-shadow: 0 12px 36px rgba(255, 215, 0, 0.08);
+    background: rgba(26, 26, 29, 0.85);
+}
+
+/* Share Button on Paper Card */
+.share-badge-btn {
+    position: absolute;
+    top: -18px;
+    right: -18px;
+    background: linear-gradient(135deg, #FFD700 60%, #F5F5DC 100%);
+    color: #222;
+    border: none;
+    border-radius: 30px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.25), 0 4px 15px rgba(0,0,0,0.18);
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 22px 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: float 3s ease-in-out infinite, pulseBadge 2s ease-in-out infinite;
+    outline: none;
+}
+
+.share-badge-btn i {
+    font-size: 18px;
+    color: #222;
+    margin-right: 2px;
+    animation: wiggle 2s ease-in-out infinite;
+}
+
+.share-badge-btn:hover {
+    background: linear-gradient(135deg, #FFD700 80%, #fffbe6 100%);
+    color: #111;
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.35), 0 6px 20px rgba(0,0,0,0.22);
+}
+
+.share-badge-btn:active {
+    transform: scale(0.97);
+}
+
+/* Paper Card Content */
+.paper-card h3 {
+    font-family: 'Merriweather', Georgia, serif;
+    color: #F5F5DC;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 14px;
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+}
+
+.paper-card .year {
+    color: #FFD700;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 22px;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}
+
+.paper-card .info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.paper-card .pages {
+    color: #9CA3AF;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.paper-card .pages i {
+    color: #FFD700;
+    opacity: 0.65;
+    font-size: 14px;
+}
+
+.paper-card .view-btn {
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+.paper-card .view-btn:hover {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.18);
+    transform: translateY(-1px);
+}
+
+/* Loading State - Soft */
+.loading {
+    text-align: center;
+    padding: 96px 24px;
+    color: #9CA3AF;
+}
+
+.loading i {
+    font-size: 48px;
+    color: #FFD700;
+    margin-bottom: 24px;
+    opacity: 0.7;
+}
+
+.loading h3 {
+    font-family: 'Merriweather', serif;
+    font-size: 24px;
+    font-weight: 300;
+    margin-bottom: 14px;
+    color: #F5F5DC;
+}
+
+.loading p {
+    font-size: 15px;
+    color: #6B7280;
+}
+
+/* No Results */
+.no-results {
+    text-align: center;
+    padding: 96px 24px;
+}
+
+.no-results i {
+    font-size: 64px;
+    color: rgba(255, 215, 0, 0.25);
+    margin-bottom: 24px;
+}
+
+.no-results h3 {
+    font-family: 'Merriweather', serif;
+    font-size: 24px;
+    font-weight: 300;
+    color: #D1D5DB;
+    margin-bottom: 14px;
+}
+
+.no-results p {
+    color: #6B7280;
+    font-size: 15px;
+}
+
+/* Modal Styles - Dark Theme */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(8px);
+}
+
+.modal-content {
+    position: relative;
+    margin: 4% auto;
+    background: #1A1A1D;
+    border-radius: 16px;
+    max-width: 90%;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.paper-modal {
+    max-width: 1200px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.viewer-header {
+    padding: 24px 32px;
+    background: rgba(26, 26, 29, 0.8);
+    border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.paper-title {
+    font-family: 'Merriweather', serif;
+    font-size: 22px;
+    font-weight: 400;
+    color: #F5F5DC;
+    letter-spacing: 0.3px;
+}
+
+.close {
+    color: #9CA3AF;
+    font-size: 32px;
+    font-weight: 300;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #FFD700;
+    transform: scale(1.1);
+}
+
+.viewer-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: #111827;
+}
+
+.image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 18px 24px;
+    cursor: pointer;
+    font-size: 24px;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+}
+
+.nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.prev-btn {
+    left: 24px;
+}
+
+.next-btn {
+    right: 24px;
+}
+
+.viewer-footer {
+    padding: 20px 32px;
+    background: rgba(26, 26, 29, 0.9);
+    border-top: 1px solid rgba(255, 215, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0 0 16px 16px;
+}
+
+.page-counter {
+    font-size: 14px;
+    color: #9CA3AF;
+    font-weight: 500;
+}
+
+.viewer-controls {
+    display: flex;
+    gap: 12px;
+}
+
+.control-btn {
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+.control-btn:hover {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 16px rgba(255, 215, 0, 0.15);
+}
+
+/* WhatsApp Share Button - Special Styling with Animations */
+#shareWhatsAppBtn {
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(37, 211, 102, 0.15));
+    color: #25D366;
+    border: 2px solid rgba(37, 211, 102, 0.5);
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 0 30px rgba(37, 211, 102, 0.3);
+    animation: pulseGlow 2s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+#shareWhatsAppBtn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(37, 211, 102, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+#shareWhatsAppBtn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+#shareWhatsAppBtn:hover {
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.3), rgba(37, 211, 102, 0.25));
+    box-shadow: 0 0 40px rgba(37, 211, 102, 0.5), 0 0 60px rgba(37, 211, 102, 0.3);
+    transform: scale(1.08);
+    border-color: rgba(37, 211, 102, 0.8);
+}
+
+#shareWhatsAppBtn:active {
+    transform: scale(0.95);
+}
+
+#shareWhatsAppBtn i {
+    font-size: 20px;
+    margin-right: 8px;
+    animation: shake 3s ease-in-out infinite;
+    display: inline-block;
+    position: relative;
+    z-index: 1;
+}
+
+/* Pulse Glow Animation */
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(37, 211, 102, 0.3), 0 0 15px rgba(37, 211, 102, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(37, 211, 102, 0.6), 0 0 25px rgba(37, 211, 102, 0.4);
+    }
+}
+
+/* Shake Animation for WhatsApp Icon */
+@keyframes shake {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: rotate(-8deg);
+    }
+    20%, 40%, 60%, 80% {
+        transform: rotate(8deg);
+    }
+}
+
+/* Responsive Design - Mobile First */
+@media (max-width: 768px) {
+    .header {
+        padding: 32px 0;
+    }
+    
+    .header h1 {
+        font-size: 24px;
+    }
+    
+    .search-container {
+        flex-direction: column;
+    }
+    
+    .search-container button {
+        width: 100%;
+    }
+    
+    .papers-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .paper-card {
+        padding: 24px;
+    }
+    
+    .main-content {
+        padding: 48px 0;
+    }
+    
+    .filters {
+        margin-bottom: 48px;
+    }
+    
+    .modal-content {
+        margin: 2% auto;
+    }
+    
+    .paper-modal {
+        height: 95vh;
+    }
+    
+    .viewer-header {
+        padding: 18px 20px;
+    }
+    
+    .paper-title {
+        font-size: 18px;
+    }
+    
+    .nav-btn {
+        padding: 14px 18px;
+        font-size: 20px;
+    }
+    
+    .prev-btn {
+        left: 12px;
+    }
+    
+    .next-btn {
+        right: 12px;
+    }
+    
+    .viewer-footer {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .viewer-controls {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    #shareWhatsAppBtn {
+        order: -1;
+        width: 100%;
+        font-size: 16px;
+        padding: 14px 20px;
+    }
+    
+    .share-badge {
+        width: 45px;
+        height: 45px;
+        top: -8px;
+        right: -8px;
+    }
+    
+    .share-badge i {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 16px;
+    }
+    
+    .header h1 {
+        font-size: 20px;
+        gap: 10px;
+    }
+    
+    .header h1 i {
+        font-size: 24px;
+    }
+    
+    .paper-card h3 {
+        font-size: 18px;
+    }
+    
+    .filters select {
+        width: 100%;
+    }
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection Color */
+::selection {
+    background: rgba(255, 215, 0, 0.3);
+    color: #F5F5DC;
+}
+
+/* Scrollbar - Subtle Dark Theme */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #111827;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.2);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 215, 0, 0.3);
+}
+
+/* Focus Styles - Accessibility */
+*:focus-visible {
+    outline: 2px solid rgba(255, 215, 0, 0.5);
+    outline-offset: 2px;
+}
+
+/* Performance Optimization */
+.paper-card, .nav-btn, .control-btn, .view-btn {
+    will-change: transform;
+}
+
+img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* ===================================
+   FOOTER SECTION
+   =================================== */
+
+.footer {
+    background: linear-gradient(180deg, rgba(26, 26, 29, 0.5), rgba(26, 26, 29, 0.9));
+    border-top: 1px solid rgba(255, 215, 0, 0.1);
+    padding: 60px 0 40px;
+    margin-top: 80px;
+    backdrop-filter: blur(10px);
+}
+
+/* Footer Share CTA */
+.footer-share {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 30px;
+    background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(37, 211, 102, 0.05));
+    border: 2px solid rgba(37, 211, 102, 0.3);
+    border-radius: 16px;
+    margin-bottom: 40px;
+    animation: gentlePulse 3s ease-in-out infinite;
+}
+
+.share-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(37, 211, 102, 0.4);
+    animation: float 3s ease-in-out infinite;
+}
+
+.share-icon i {
+    font-size: 32px;
+    color: white;
+}
+
+.share-message {
+    font-size: 18px;
+    color: #E5E7EB;
+    font-weight: 500;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Footer Divider */
+.footer-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+    margin: 40px 0;
+}
+
+/* Footer Credits */
+.footer-credits {
+    text-align: center;
+    color: #9CA3AF;
+}
+
+.footer-credits p {
+    margin: 12px 0;
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.free-message {
+    font-size: 18px !important;
+    color: #F5F5DC;
+    margin-bottom: 20px !important;
+}
+
+.free-message i {
+    color: #FF6B6B;
+    animation: heartbeat 1.5s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+.free-message strong {
+    color: #FFD700;
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.developer-info {
+    color: #D1D5DB;
+    font-size: 16px !important;
+    margin: 16px 0 !important;
+}
+
+.developer-info i {
+    color: #FFD700;
+    margin-right: 8px;
+}
+
+.developer-info strong {
+    color: #FFD700;
+    font-weight: 600;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Gentle Pulse Animation for Footer */
+@keyframes gentlePulse {
+    0%, 100% {
+        box-shadow: 0 0 40px rgba(37, 211, 102, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 60px rgba(37, 211, 102, 0.4);
+    }
+}
+
+/* Heartbeat Animation */
+@keyframes heartbeat {
+    0%, 100% {
+        transform: scale(1);
+    }
+    25% {
+        transform: scale(1.2);
+    }
+    50% {
+        transform: scale(1);
+    }
+    75% {
+        transform: scale(1.15);
+    }
+}
+
+/* Footer Responsive */
+@media (max-width: 768px) {
+    .footer {
+        padding: 40px 0 30px;
+        margin-top: 60px;
+    }
+    
+    .footer-share {
+        flex-direction: column;
+        padding: 24px;
+        text-align: center;
+    }
+    
+    .share-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .share-icon i {
+        font-size: 26px;
+    }
+    
+    .share-message {
+        font-size: 16px;
+    }
+    
+    .free-message {
+        font-size: 16px !important;
+    }
+    
+    .free-message strong {
+        font-size: 18px;
+    }
+    
+    .developer-info {
+        font-size: 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer {
+        margin-top: 40px;
+    }
+    
+    .footer-share {
+        padding: 20px;
+    }
+    
+    .share-message {
+        font-size: 14px;
+    }
+}
