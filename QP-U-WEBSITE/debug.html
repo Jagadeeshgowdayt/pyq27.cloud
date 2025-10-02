@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Website Debug Test</h1>
+    <div id="output"></div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+
+        // Wait for DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            log('<h2>Testing Main.js Loading...</h2>');
+            
+            // Check if QuestionPaperManager exists
+            if (typeof QuestionPaperManager !== 'undefined') {
+                log('✓ QuestionPaperManager class found', 'success');
+            } else {
+                log('✗ QuestionPaperManager class NOT found', 'error');
+            }
+
+            // Check if paperManager was initialized
+            setTimeout(() => {
+                if (typeof paperManager !== 'undefined' && paperManager !== null) {
+                    log('✓ paperManager initialized', 'success');
+                    log(`Papers count: ${paperManager.papers.length}`, 'info');
+                    
+                    if (paperManager.papers.length > 0) {
+                        log('<h3>Sample Papers:</h3>');
+                        paperManager.papers.forEach((paper, index) => {
+                            log(`${index + 1}. ${paper.subject} (${paper.school}) - ${paper.totalPages} page(s)`);
+                        });
+                    } else {
+                        log('✗ No papers loaded', 'error');
+                    }
+                } else {
+                    log('✗ paperManager NOT initialized', 'error');
+                }
+
+                // Check localStorage
+                const stored = localStorage.getItem('questionPapers');
+                if (stored) {
+                    log('<h3>LocalStorage Check:</h3>');
+                    try {
+                        const parsed = JSON.parse(stored);
+                        log(`✓ Found ${parsed.length} papers in localStorage`, 'success');
+                    } catch(e) {
+                        log(`✗ Error parsing localStorage: ${e.message}`, 'error');
+                    }
+                } else {
+                    log('No data in localStorage', 'info');
+                }
+            }, 1000);
+        });
+
+        // Catch any JavaScript errors
+        window.addEventListener('error', (e) => {
+            log(`<h3 class="error">JavaScript Error:</h3><pre>${e.message}\nFile: ${e.filename}\nLine: ${e.lineno}:${e.colno}</pre>`, 'error');
+        });
+    </script>
+</body>
+</html>

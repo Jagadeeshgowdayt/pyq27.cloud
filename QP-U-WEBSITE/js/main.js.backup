@@ -1,0 +1,1749 @@
+// Question Papers Data Storage
+class QuestionPaperManager {
+    constructor() {
+        this.papers = JSON.parse(localStorage.getItem('questionPapers')) || [];
+        this.currentViewing = null;
+        this.currentPageIndex = 0;
+        this.zoomLevel = 1;
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.renderPapers();
+        this.populateFilters();
+        this.setupProtection();
+    }
+
+    setupEventListeners() {
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', () => this.filterPapers());
+        document.getElementById('searchBtn').addEventListener('click', () => this.filterPapers());
+        
+        // Filter dropdowns
+        document.getElementById('yearFilter').addEventListener('change', () => this.filterPapers());
+        document.getElementById('subjectFilter').addEventListener('change', () => this.filterPapers());
+
+        // Admin modal
+        document.getElementById('adminBtn').addEventListener('click', () => this.openAdminModal());
+        
+        // Modal close buttons
+        document.querySelectorAll('.close').forEach(btn => {
+            btn.addEventListener('click', (e) => this.closeModal(e.target.closest('.modal')));
+        });
+
+        // Click outside modal to close
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                this.closeModal(e.target);
+            }
+        });
+
+        // Upload form
+        document.getElementById('uploadForm').addEventListener('submit', (e) => this.handleUpload(e));
+        document.getElementById('paperFiles').addEventListener('change', (e) => this.previewFiles(e));
+
+        // Paper viewer controls
+        document.getElementById('prevBtn').addEventListener('click', () => this.previousPage());
+        document.getElementById('nextBtn').addEventListener('click', () => this.nextPage());
+        document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
+        document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+
+        // Touch gestures for mobile
+        this.setupTouchGestures();
+    }
+
+    setupProtection() {
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        // Disable F12, Ctrl+Shift+I, Ctrl+U, etc.
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'u') ||
+                (e.ctrlKey && e.key === 's') ||
+                (e.key === 'PrintScreen')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Disable drag and drop
+        document.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        // Disable selection
+        document.addEventListener('selectstart', (e) => {
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Hide images when print is attempted
+        window.addEventListener('beforeprint', () => {
+            document.querySelectorAll('img').forEach(img => {
+                img.style.display = 'none';
+            });
+        });
+
+        window.addEventListener('afterprint', () => {
+            document.querySelectorAll('img').forEach(img => {
+                img.style.display = '';
+            });
+        });
+    }
+
+    setupTouchGestures() {
+        let startX = 0;
+        let startY = 0;
+
+        document.getElementById('imageContainer').addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+
+        document.getElementById('imageContainer').addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const diffX = startX - endX;
+            const diffY = Math.abs(startY - endY);
+
+            // Swipe threshold
+            if (Math.abs(diffX) > 50 && diffY < 100) {
+                if (diffX > 0) {
+                    this.nextPage(); // Swipe left - next page
+                } else {
+                    this.previousPage(); // Swipe right - previous page
+                }
+            }
+        });
+    }
+
+    openAdminModal() {
+        const password = prompt("Enter admin password:");
+        if (password === "admin123") { // Change this password!
+            document.getElementById('adminModal').style.display = 'block';
+        } else if (password !== null) {
+            alert("Incorrect password!");
+        }
+    }
+
+    closeModal(modal) {
+        if (modal) {
+            modal.style.display = 'none';
+            // Reset upload form
+            if (modal.id === 'adminModal') {
+                document.getElementById('uploadForm').reset();
+                document.getElementById('previewContainer').innerHTML = '';
+            }
+        }
+    }
+
+    parseFileName(filename) {
+        // Expected format: SubjectName_School_PageNo.extension
+        // Example: computer_networks_socse_1.jpg, data_structures_socs_2.png
+        const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
+        const parts = nameWithoutExt.split('_');
+        
+        if (parts.length >= 3) {
+            // Last part should be page number
+            const pageNo = parseInt(parts[parts.length - 1]);
+            if (isNaN(pageNo)) {
+                return null; // Invalid format - page number must be numeric
+            }
+            
+            // Second to last is school
+            const school = parts[parts.length - 2].trim();
+            
+            // Everything before school is subject name (can have underscores)
+            const subjectParts = parts.slice(0, -2);
+            const subject = subjectParts.join(' ').replace(/-/g, ' ').trim();
+            
+            // Format text for display
+            const formattedSubject = this.capitalizeWords(subject);
+            const formattedSchool = school.toUpperCase();
+            
+            return {
+                subject: formattedSubject,
+                school: formattedSchool,
+                pageNo,
+                baseFileName: `${subjectParts.join('_')}_${school}`,
+                isValid: true
+            };
+        }
+        
+        return null; // Invalid format
+    }
+
+    capitalizeWords(text) {
+        return text.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
+    }
+
+    groupFilesByPaper(files) {
+        const grouped = {};
+        const invalidFiles = [];
+        
+        files.forEach((file, index) => {
+            const metadata = this.parseFileName(file.name);
+            
+            if (metadata && metadata.isValid) {
+                const key = metadata.baseFileName;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        subject: metadata.subject,
+                        school: metadata.school,
+                        files: [],
+                        isValid: true
+                    };
+                }
+                grouped[key].files.push({
+                    file,
+                    pageNo: metadata.pageNo,
+                    originalIndex: index
+                });
+            } else {
+                // Invalid format - needs manual entry
+                invalidFiles.push({
+                    file,
+                    index,
+                    error: 'Invalid filename format'
+                });
+            }
+        });
+        
+        // Sort files within each group by page number
+        Object.keys(grouped).forEach(key => {
+            grouped[key].files.sort((a, b) => a.pageNo - b.pageNo);
+        });
+        
+        return { grouped, invalidFiles };
+    }
+
+    async previewFiles(event) {
+        const files = Array.from(event.target.files);
+        const container = document.getElementById('previewContainer');
+        container.innerHTML = '';
+
+        if (files.length === 0) return;
+
+        // Check if using bulk upload mode (filename pattern detected)
+        const { grouped, invalidFiles } = this.groupFilesByPaper(files);
+        
+        // Show warning for invalid files
+        if (invalidFiles.length > 0) {
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = 'margin-bottom: 20px; padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; color: #856404;';
+            warningDiv.innerHTML = `
+                <div style="display: flex; align-items: start; gap: 10px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #ff6b6b;"></i>
+                    <div style="flex: 1;">
+                        <strong style="font-size: 16px;">⚠ ${invalidFiles.length} file(s) have incorrect format!</strong>
+                        <p style="margin: 10px 0 5px 0;">Expected format: <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">SubjectName_School_PageNo.jpeg</code></p>
+                        <p style="margin: 5px 0;">Example: <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">computer_networks_socse_1.jpeg</code></p>
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; font-weight: bold;">Show invalid files</summary>
+                            <ul style="margin: 10px 0 0 20px;">
+                                ${invalidFiles.map(f => `<li><code>${this.escapeHtml(f.file.name)}</code></li>`).join('')}
+                            </ul>
+                        </details>
+                        <p style="margin-top: 10px; font-weight: bold; color: #d9534f;">
+                            ❌ These files will be skipped. Please rename them and upload again, OR use manual upload mode for single papers.
+                        </p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(warningDiv);
+        }
+        
+        if (Object.keys(grouped).length > 0) {
+            // Bulk upload mode with metadata extraction
+            
+            // Display grouped papers
+            let groupIndex = 0;
+            for (const [key, paperData] of Object.entries(grouped)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'paper-group';
+                groupDiv.style.cssText = 'margin-bottom: 25px; padding: 15px; border: 2px solid #667eea; border-radius: 10px; background: #f7fafc;';
+                
+                const groupHeader = document.createElement('div');
+                groupHeader.style.cssText = 'margin-bottom: 10px; font-weight: bold; color: #2d3748;';
+                groupHeader.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-size: 18px; color: #667eea;">📚 ${this.escapeHtml(paperData.subject)}</div>
+                            <div style="font-size: 14px; color: #718096; margin-top: 3px;">
+                                <i class="fas fa-university"></i> ${this.escapeHtml(paperData.school)} | 
+                                <i class="fas fa-file-image"></i> ${paperData.files.length} page(s)
+                            </div>
+                        </div>
+                        <button class="remove-group-btn" onclick="paperManager.removeGroup('${key}')" 
+                                style="background: #e53e3e; color: white; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer; font-size: 13px;">
+                            <i class="fas fa-trash"></i> Remove Group
+                        </button>
+                    </div>
+                `;
+                groupDiv.appendChild(groupHeader);
+                
+                const filesContainer = document.createElement('div');
+                filesContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;';
+                filesContainer.id = `group-${key}`;
+                
+                for (let i = 0; i < paperData.files.length; i++) {
+                    const fileData = paperData.files[i];
+                    const file = fileData.file;
+                    
+                    if (file.type.startsWith('image/')) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        previewItem.dataset.group = key;
+                        previewItem.dataset.originalIndex = fileData.originalIndex;
+                        previewItem.style.position = 'relative';
+                        
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        img.alt = `Page ${fileData.pageNo}`;
+                        
+                        const pageLabel = document.createElement('div');
+                        pageLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;';
+                        pageLabel.textContent = `Page ${fileData.pageNo}`;
+                        
+                        previewItem.appendChild(img);
+                        previewItem.appendChild(pageLabel);
+                        filesContainer.appendChild(previewItem);
+                    }
+                }
+                
+                groupDiv.appendChild(filesContainer);
+                container.appendChild(groupDiv);
+                groupIndex++;
+            }
+            
+            // Store grouped data for upload
+            this.groupedFiles = grouped;
+            
+            // Show bulk upload info
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'margin-top: 15px; padding: 15px; background: #d4edda; border: 2px solid #c3e6cb; border-radius: 10px; color: #155724;';
+            infoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-check-circle" style="font-size: 24px;"></i>
+                    <div>
+                        <strong style="font-size: 16px;">✅ Bulk Upload Ready!</strong><br>
+                        <span>Found ${Object.keys(grouped).length} question paper(s) with ${files.length - invalidFiles.length} valid page(s).</span><br>
+                        <small style="opacity: 0.8;">Subject, School, and Page numbers extracted from filenames automatically.</small>
+                    </div>
+                </div>
+            `;
+            container.insertBefore(infoDiv, container.firstChild);
+            
+            // Hide manual input fields for bulk upload
+            document.getElementById('paperSubject').disabled = true;
+            document.getElementById('paperSubject').value = '(Auto-detected from filenames)';
+            
+        } else if (invalidFiles.length > 0) {
+            // All files are invalid - show manual upload option
+            const manualDiv = document.createElement('div');
+            manualDiv.style.cssText = 'margin-top: 15px; padding: 15px; background: #e3f2fd; border: 2px solid #2196f3; border-radius: 10px; color: #0d47a1;';
+            manualDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-info-circle" style="font-size: 24px;"></i>
+                    <div>
+                        <strong>Manual Upload Mode</strong><br>
+                        <span>Please enter the subject name and school manually below, then upload your images.</span>
+                    </div>
+                </div>
+            `;
+            container.appendChild(manualDiv);
+            
+            // Enable manual input fields
+            document.getElementById('paperSubject').disabled = false;
+            document.getElementById('paperSubject').value = '';
+        }
+    }
+                    const file = fileData.file;
+                    
+                    if (file.type.startsWith('image/')) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        previewItem.dataset.group = key;
+                        previewItem.dataset.originalIndex = fileData.originalIndex;
+                        
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        img.alt = `Page ${fileData.pageNo}`;
+                        
+                        const pageLabel = document.createElement('div');
+                        pageLabel.style.cssText = 'position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;';
+                        pageLabel.textContent = `P${fileData.pageNo}`;
+                        
+                        previewItem.appendChild(img);
+                        previewItem.appendChild(pageLabel);
+                        filesContainer.appendChild(previewItem);
+                    }
+                }
+                
+                groupDiv.appendChild(filesContainer);
+                container.appendChild(groupDiv);
+                groupIndex++;
+            }
+            
+            // Store grouped data for upload
+            this.groupedFiles = grouped;
+            
+            // Show bulk upload info
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'margin-top: 15px; padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; color: #155724;';
+            infoDiv.innerHTML = `
+                <strong>✅ Bulk Upload Detected!</strong><br>
+                Found ${Object.keys(grouped).length} question paper(s) with ${files.length} total page(s).<br>
+                <small>Metadata extracted from filenames. Manual fields will be ignored.</small>
+            `;
+            container.insertBefore(infoDiv, container.firstChild);
+            
+        } else {
+            // Regular single/manual upload mode
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith('image/')) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.alt = `Page ${i + 1}`;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.onclick = () => this.removePreviewFile(i, event.target);
+                    
+                    previewItem.appendChild(img);
+                    previewItem.appendChild(removeBtn);
+                    container.appendChild(previewItem);
+                }
+            }
+            this.groupedFiles = null;
+        }
+    }
+
+    removeGroup(groupKey) {
+        if (!this.groupedFiles || !this.groupedFiles[groupKey]) return;
+        
+        delete this.groupedFiles[groupKey];
+        
+        // Rebuild file input with remaining files
+        const fileInput = document.getElementById('paperFiles');
+        const dt = new DataTransfer();
+        
+        Object.values(this.groupedFiles).forEach(paperData => {
+            paperData.files.forEach(fileData => {
+                dt.items.add(fileData.file);
+            });
+        });
+        
+        fileInput.files = dt.files;
+        this.previewFiles({ target: fileInput });
+    }
+
+    removePreviewFile(index, fileInput) {
+        const dt = new DataTransfer();
+        const files = Array.from(fileInput.files);
+        
+        files.forEach((file, i) => {
+            if (i !== index) {
+                dt.items.add(file);
+            }
+        });
+        
+        fileInput.files = dt.files;
+        this.previewFiles({ target: fileInput });
+    }
+
+    async handleUpload(event) {
+        event.preventDefault();
+        
+        const submitBtn = event.target.querySelector('.submit-btn');
+        const fileInput = document.getElementById('paperFiles');
+        const files = Array.from(fileInput.files);
+
+        if (files.length === 0) {
+            alert('Please select at least one image file.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+        try {
+            let uploadedCount = 0;
+
+            // Check if bulk upload with grouped files
+            if (this.groupedFiles && Object.keys(this.groupedFiles).length > 0) {
+                // Bulk upload mode - process grouped files
+                for (const [key, paperData] of Object.entries(this.groupedFiles)) {
+                    const pages = [];
+                    
+                    // Convert files to base64 for storage
+                    for (let i = 0; i < paperData.files.length; i++) {
+                        const fileData = paperData.files[i];
+                        const base64 = await this.fileToBase64(fileData.file);
+                        pages.push({
+                            name: fileData.file.name,
+                            data: base64,
+                            size: fileData.file.size,
+                            pageNo: fileData.pageNo
+                        });
+                    }
+
+                    const paper = {
+                        id: Date.now() + uploadedCount,
+                        subject: paperData.subject,
+                        school: paperData.school,
+                        pages: pages,
+                        uploadDate: new Date().toISOString(),
+                        totalPages: pages.length
+                    };
+
+                    this.papers.push(paper);
+                    uploadedCount++;
+                }
+
+                this.savePapers();
+                this.renderPapers();
+                this.populateFilters();
+                
+                alert(`✅ Successfully uploaded ${uploadedCount} question paper(s) with ${files.length} total page(s) using bulk upload!`);
+                
+            } else {
+                // Manual upload mode - use form fields
+                const subject = document.getElementById('paperSubject').value.trim();
+                const school = document.getElementById('paperSchool').value.trim();
+
+                if (!subject || !school) {
+                    alert('Please fill in subject and school for manual upload.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Paper';
+                    return;
+                }
+
+                const pages = [];
+                
+                // Convert files to base64 for storage
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const base64 = await this.fileToBase64(file);
+                    pages.push({
+                        name: file.name,
+                        data: base64,
+                        size: file.size
+                    });
+                }
+
+                const paper = {
+                    id: Date.now(),
+                    subject: subject,
+                    school: school.toUpperCase(),
+                    pages: pages,
+                    uploadDate: new Date().toISOString(),
+                    totalPages: pages.length
+                };
+
+                this.papers.push(paper);
+                this.savePapers();
+                this.renderPapers();
+                this.populateFilters();
+                
+                alert(`✅ Successfully uploaded ${paper.totalPages} page(s) for ${subject} (${school})`);
+            }
+
+            this.closeModal(document.getElementById('adminModal'));
+            this.groupedFiles = null; // Reset grouped files
+            
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('❌ Error uploading files. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Paper';
+        }
+    }
+                    const base64 = await this.fileToBase64(file);
+                    pages.push({
+                        name: file.name,
+                        data: base64,
+                        size: file.size,
+                        pageNo: i + 1
+                    });
+                }
+
+                const paper = {
+                    id: Date.now(),
+                    subject: subject,
+                    year: year,
+                    pages: pages,
+                    uploadDate: new Date().toISOString(),
+                    totalPages: pages.length
+                };
+
+                this.papers.push(paper);
+                this.savePapers();
+                this.renderPapers();
+                this.populateFilters();
+                
+                alert(`✅ Successfully uploaded ${paper.totalPages} page(s) for ${subject} (${year})`);
+            }
+            
+            this.closeModal(document.getElementById('adminModal'));
+            this.groupedFiles = null;
+            
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('❌ Error uploading files. Please try again.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Paper';
+        }
+    }
+
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    savePapers() {
+        localStorage.setItem('questionPapers', JSON.stringify(this.papers));
+    }
+
+    renderPapers(papersToShow = null) {
+        const container = document.getElementById('papersGrid');
+        const papers = papersToShow || this.papers;
+
+        if (papers.length === 0) {
+            if (this.papers.length === 0) {
+                container.innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-book"></i>
+                        <h3>No Papers Yet</h3>
+                        <p>Use the admin upload to add question papers</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('noResults').style.display = 'block';
+                container.innerHTML = '';
+            }
+            return;
+        }
+
+        document.getElementById('noResults').style.display = 'none';
+        
+        container.innerHTML = papers.map(paper => `
+            <div class="paper-card" onclick="paperManager.openPaper(${paper.id})">
+                <h3>${this.escapeHtml(paper.subject)}</h3>
+                <div class="year">${paper.school || 'N/A'}</div>
+                <div class="info">
+                    <span class="pages">
+                        <i class="fas fa-file-image"></i>
+                        ${paper.totalPages} page${paper.totalPages > 1 ? 's' : ''}
+                    </span>
+                    <button class="view-btn" onclick="event.stopPropagation(); paperManager.openPaper(${paper.id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    populateFilters() {
+        const years = [...new Set(this.papers.map(paper => paper.year))].sort((a, b) => b - a);
+        const subjects = [...new Set(this.papers.map(paper => paper.subject))].sort();
+
+        const yearFilter = document.getElementById('yearFilter');
+        const subjectFilter = document.getElementById('subjectFilter');
+
+        yearFilter.innerHTML = '<option value="">All Years</option>' +
+            years.map(year => `<option value="${year}">${year}</option>`).join('');
+
+        subjectFilter.innerHTML = '<option value="">All Subjects</option>' +
+            subjects.map(subject => `<option value="${this.escapeHtml(subject)}">${this.escapeHtml(subject)}</option>`).join('');
+    }
+
+    filterPapers() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const yearFilter = document.getElementById('yearFilter').value;
+        const subjectFilter = document.getElementById('subjectFilter').value;
+
+        const filteredPapers = this.papers.filter(paper => {
+            const matchesSearch = paper.subject.toLowerCase().includes(searchTerm) ||
+                                paper.year.toString().includes(searchTerm);
+            const matchesYear = !yearFilter || paper.year.toString() === yearFilter;
+            const matchesSubject = !subjectFilter || paper.subject === subjectFilter;
+
+            return matchesSearch && matchesYear && matchesSubject;
+        });
+
+        this.renderPapers(filteredPapers);
+    }
+
+    openPaper(paperId) {
+        const paper = this.papers.find(p => p.id === paperId);
+        if (!paper) return;
+
+        this.currentViewing = paper;
+        this.currentPageIndex = 0;
+        this.zoomLevel = 1;
+
+        document.getElementById('viewerTitle').textContent = `${paper.subject} (${paper.school || 'N/A'})`;
+        document.getElementById('paperModal').style.display = 'block';
+        
+        this.updateViewer();
+        
+        // Prevent body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+    }
+
+    updateViewer() {
+        if (!this.currentViewing || !this.currentViewing.pages.length) return;
+
+        const currentPage = this.currentViewing.pages[this.currentPageIndex];
+        const img = document.getElementById('currentImage');
+        
+        img.src = currentPage.data;
+        img.style.transform = `scale(${this.zoomLevel})`;
+        
+        // Update page counter
+        document.getElementById('pageCounter').textContent = 
+            `Page ${this.currentPageIndex + 1} of ${this.currentViewing.pages.length}`;
+
+        // Update navigation buttons
+        document.getElementById('prevBtn').disabled = this.currentPageIndex === 0;
+        document.getElementById('nextBtn').disabled = this.currentPageIndex === this.currentViewing.pages.length - 1;
+
+        // Add loading protection
+        img.onload = () => {
+            // Add additional protection overlay
+            const overlay = document.getElementById('pageOverlay');
+            overlay.style.pointerEvents = 'auto';
+        };
+    }
+
+    previousPage() {
+        if (this.currentViewing && this.currentPageIndex > 0) {
+            this.currentPageIndex--;
+            this.updateViewer();
+        }
+    }
+
+    nextPage() {
+        if (this.currentViewing && this.currentPageIndex < this.currentViewing.pages.length - 1) {
+            this.currentPageIndex++;
+            this.updateViewer();
+        }
+    }
+
+    zoomIn() {
+        this.zoomLevel = Math.min(this.zoomLevel * 1.2, 3);
+        this.updateViewer();
+    }
+
+    zoomOut() {
+        this.zoomLevel = Math.max(this.zoomLevel / 1.2, 0.5);
+        this.updateViewer();
+    }
+
+    toggleFullscreen() {
+        const modal = document.getElementById('paperModal');
+        
+        if (!document.fullscreenElement) {
+            modal.requestFullscreen().catch(err => {
+                console.log('Fullscreen not supported');
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    handleKeyPress(event) {
+        if (!this.currentViewing) return;
+
+        switch(event.key) {
+            case 'ArrowLeft':
+                event.preventDefault();
+                this.previousPage();
+                break;
+            case 'ArrowRight':
+                event.preventDefault();
+                this.nextPage();
+                break;
+            case 'Escape':
+                this.closeModal(document.getElementById('paperModal'));
+                document.body.style.overflow = '';
+                break;
+            case '+':
+            case '=':
+                event.preventDefault();
+                this.zoomIn();
+                break;
+            case '-':
+                event.preventDefault();
+                this.zoomOut();
+                break;
+        }
+    }
+}
+
+// Initialize the application
+let paperManager;
+
+document.addEventListener('DOMContentLoaded', () => {
+    paperManager = new QuestionPaperManager();
+    
+    // Add sample data for demonstration (remove in production)
+    if (paperManager.papers.length === 0) {
+        paperManager.addSampleData();
+    }
+});
+
+// Add sample data method (remove in production)
+QuestionPaperManager.prototype.addSampleData = function() {
+    // Simple SVG generator for demo papers
+    const generateSimpleSVG = (title, school, pageNum) => {
+        return "data:image/svg+xml;base64," + btoa(`<svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+<rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+<rect x="0" y="0" width="100%" height="60" fill="#4a90e2"/>
+<text x="300" y="38" text-anchor="middle" font-size="20" font-weight="bold" fill="white">${title}</text>
+<text x="50" y="100" font-size="16" font-weight="bold">School: ${school}</text>
+<text x="50" y="140" font-size="14">Question Paper - Page ${pageNum}</text>
+<text x="50" y="180" font-size="14">Duration: 3 hours | Max Marks: 100</text>
+<text x="50" y="230" font-size="14" font-weight="bold">Q1. Sample Question [20 marks]</text>
+<text x="70" y="260" font-size="13">This is a demonstration question paper.</text>
+<text x="50" y="310" font-size="14" font-weight="bold">Q2. Sample Question [15 marks]</text>
+<text x="70" y="340" font-size="13">Answer in your own words.</text>
+<text x="50" y="390" font-size="14" font-weight="bold">Q3. Sample Question [15 marks]</text>
+<text x="70" y="420" font-size="13">Explain with examples.</text>
+<text x="300" y="770" text-anchor="middle" font-size="12">Page ${pageNum}</text>
+</svg>`);
+    };
+    
+    const samplePapers = [
+        {
+            id: 1,
+            subject: "Mathematics",
+            school: "SOBS",
+            pages: [
+                {
+                    name: "math-page1.jpg",
+                    data: generateSimpleSVG("MATHEMATICS", "SOBS", 1)
+                            <text x="70" y="265" class="formula">b) ∫₀^π sin³x cos²x dx</text>
+                            
+                            <text x="50" y="310" class="question">Q3. Find the area between curves: [15 marks]</text>
+                            <text x="70" y="340" class="formula">y = x² and y = 2x + 3</text>
+                            
+                            <text x="50" y="385" class="question">Q4. Series convergence: [20 marks]</text>
+                            <text x="70" y="415" class="formula">Test convergence: Σ(n=1 to ∞) n!/(2n)!</text>
+                            
+                            <text x="50" y="460" class="question">Q5. Partial derivatives: [15 marks]</text>
+                            <text x="70" y="490" class="formula">If f(x,y) = x³y² + e^(xy), find ∂²f/∂x∂y</text>
+                            
+                            <text x="50" y="535" class="question">Q6. Multiple integration: [15 marks]</text>
+                            <text x="70" y="565" class="formula">∫∫ᴿ xy dA where R: 0≤x≤2, 0≤y≤x²</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 3</text>
+                        </svg>
+                    `),
+                    size: 2048
+                },
+                {
+                    name: "math-2024-page2.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            
+                            <text x="50" y="50" class="question">Q7. Vector Calculus: [25 marks]</text>
+                            <text x="70" y="80" class="subtext">Given vector field F = (x²y)i + (xy²)j + z²k</text>
+                            <text x="70" y="105" class="formula">a) Find ∇ × F (curl of F)</text>
+                            <text x="70" y="130" class="formula">b) Find ∇ · F (divergence of F)</text>
+                            <text x="70" y="155" class="formula">c) Evaluate ∮ᴄ F·dr along curve C: x²+y²=4, z=0</text>
+                            
+                            <text x="50" y="200" class="question">Q8. Fourier Series: [20 marks]</text>
+                            <text x="70" y="230" class="formula">Find Fourier series for f(x) = |x| on [-π, π]</text>
+                            <text x="70" y="255" class="subtext">Show that π²/8 = 1 + 1/3² + 1/5² + ...</text>
+                            
+                            <text x="50" y="300" class="question">Q9. Complex Analysis: [15 marks]</text>
+                            <text x="70" y="330" class="formula">Evaluate ∮ᴄ (z²+1)/(z²-1) dz</text>
+                            <text x="70" y="355" class="subtext">where C is the circle |z| = 2</text>
+                            
+                            <text x="50" y="400" class="question">Q10. Linear Algebra: [20 marks]</text>
+                            <text x="70" y="430" class="formula">Find eigenvalues and eigenvectors of:</text>
+                            <text x="70" y="455" class="formula">A = [2  1  0]</text>
+                            <text x="70" y="480" class="formula">    [1  2  1]</text>
+                            <text x="70" y="505" class="formula">    [0  1  2]</text>
+                            
+                            <rect x="50" y="560" width="500" height="120" fill="#f0f8ff" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="585" text-anchor="middle" class="question">INSTRUCTIONS:</text>
+                            <text x="70" y="610" class="subtext">• Answer all questions</text>
+                            <text x="70" y="635" class="subtext">• Show all working steps</text>
+                            <text x="70" y="660" class="subtext">• Use only blue/black ink</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 2 of 3</text>
+                        </svg>
+                    `),
+                    size: 2048
+                },
+                {
+                    name: "math-2024-page3.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            
+                            <text x="300" y="40" text-anchor="middle" class="header">ANSWER SHEET</text>
+                            
+                            <text x="50" y="80" class="question">BONUS QUESTION: [10 marks]</text>
+                            <text x="70" y="110" class="subtext">Prove that e^(iπ) + 1 = 0</text>
+                            <text x="70" y="135" class="subtext">Explain the significance of this equation</text>
+                            
+                            <rect x="50" y="170" width="500" height="400" fill="none" stroke="#ccc" stroke-width="1"/>
+                            <text x="60" y="190" class="subtext">Use this space for rough work:</text>
+                            
+                            <!-- Grid lines for answer space -->
+                            <defs>
+                                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                                </pattern>
+                            </defs>
+                            <rect x="50" y="200" width="500" height="370" fill="url(#grid)"/>
+                            
+                            <rect x="50" y="600" width="500" height="80" fill="#fff8dc" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="625" text-anchor="middle" class="question">EXAMINATION DETAILS</text>
+                            <text x="70" y="650" class="subtext">Institution: University College of Engineering</text>
+                            <text x="70" y="670" class="subtext">Subject Code: MATH301 | Semester: III</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 3 of 3 - END</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 3
+        },
+        {
+            id: 2,
+            subject: "Physics",
+            school: "SOPS",
+            pages: [
+                {
+                    name: "physics-2024-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#e6f3ff"/>
+                            <text x="300" y="35" class="header">PHYSICS - QUANTUM MECHANICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Schrödinger Equation: [25 marks]</text>
+                            <text x="70" y="140" class="formula">Solve: -ℏ²/2m d²ψ/dx² + V(x)ψ = Eψ</text>
+                            <text x="70" y="165" class="subtext">For infinite square well: V(x) = 0 (0<x<a), ∞ elsewhere</text>
+                            
+                            <text x="50" y="210" class="question">Q2. Quantum Harmonic Oscillator: [20 marks]</text>
+                            <text x="70" y="240" class="formula">Energy levels: E_n = ℏω(n + 1/2)</text>
+                            <text x="70" y="265" class="subtext">Find ground state wavefunction ψ₀(x)</text>
+                            
+                            <text x="50" y="310" class="question">Q3. Angular Momentum: [20 marks]</text>
+                            <text x="70" y="340" class="formula">L² = -ℏ²[1/sinθ ∂/∂θ(sinθ ∂/∂θ) + 1/sin²θ ∂²/∂φ²]</text>
+                            <text x="70" y="365" class="subtext">Find eigenvalues for L² and L_z operators</text>
+                            
+                            <text x="50" y="410" class="question">Q4. Hydrogen Atom: [20 marks]</text>
+                            <text x="70" y="440" class="formula">V(r) = -ke²/r</text>
+                            <text x="70" y="465" class="subtext">Calculate Bohr radius and ground state energy</text>
+                            
+                            <text x="50" y="510" class="question">Q5. Spin and Statistics: [15 marks]</text>
+                            <text x="70" y="540" class="formula">S_z|↑⟩ = ℏ/2|↑⟩, S_z|↓⟩ = -ℏ/2|↓⟩</text>
+                            <text x="70" y="565" class="subtext">Derive Pauli matrices and commutation relations</text>
+                            
+                            <rect x="50" y="610" width="500" height="100" fill="#fff0e6" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="635" text-anchor="middle" class="question">CONSTANTS</text>
+                            <text x="70" y="660" class="formula">ℏ = 1.055×10⁻³⁴ J·s | c = 3×10⁸ m/s</text>
+                            <text x="70" y="680" class="formula">m_e = 9.11×10⁻³¹ kg | e = 1.6×10⁻¹⁹ C</text>
+                            <text x="70" y="700" class="formula">k = 8.99×10⁹ N·m²/C²</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 2</text>
+                        </svg>
+                    `),
+                    size: 2048
+                },
+                {
+                    name: "physics-2024-page2.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            
+                            <text x="50" y="50" class="question">Q6. Perturbation Theory: [25 marks]</text>
+                            <text x="70" y="80" class="formula">H = H₀ + λH₁</text>
+                            <text x="70" y="105" class="subtext">First-order energy correction: E₁⁽¹⁾ = ⟨ψ₁⁽⁰⁾|H₁|ψ₁⁽⁰⁾⟩</text>
+                            <text x="70" y="130" class="subtext">Apply to harmonic oscillator with perturbation H₁ = αx³</text>
+                            
+                            <text x="50" y="175" class="question">Q7. Quantum Tunneling: [20 marks]</text>
+                            <text x="70" y="205" class="subtext">Particle with energy E < V₀ incident on barrier</text>
+                            <text x="70" y="230" class="formula">Transmission coefficient: T = |t|²</text>
+                            <text x="70" y="255" class="subtext">Calculate for rectangular barrier of width a</text>
+                            
+                            <text x="50" y="300" class="question">Q8. Entanglement and Bell States: [15 marks]</text>
+                            <text x="70" y="330" class="formula">|Φ⁺⟩ = 1/√2(|00⟩ + |11⟩)</text>
+                            <text x="70" y="355" class="subtext">Prove violation of Bell inequality</text>
+                            
+                            <text x="50" y="400" class="question">Q9. Time Evolution: [20 marks]</text>
+                            <text x="70" y="430" class="formula">|ψ(t)⟩ = e^(-iHt/ℏ)|ψ(0)⟩</text>
+                            <text x="70" y="455" class="subtext">For two-level system with Hamiltonian:</text>
+                            <text x="70" y="480" class="formula">H = ℏω₀/2 σ_z + ℏΩ/2 σ_x</text>
+                            
+                            <rect x="50" y="520" width="500" height="150" fill="#f0fff0" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="545" text-anchor="middle" class="question">BONUS PROBLEM [10 marks]</text>
+                            <text x="70" y="570" class="subtext">Derive the uncertainty principle:</text>
+                            <text x="70" y="595" class="formula">ΔxΔp ≥ ℏ/2</text>
+                            <text x="70" y="620" class="subtext">Using commutation relation [x̂,p̂] = iℏ</text>
+                            <text x="70" y="645" class="subtext">Show physical significance with examples</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 2 of 2 - END</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 2
+        },
+        {
+            id: 3,
+            subject: "Chemistry",
+            school: "SOCS",
+            pages: [
+                {
+                    name: "chemistry-2023-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#ffe6e6"/>
+                            <text x="300" y="35" class="header">ORGANIC CHEMISTRY</text>
+                            <text x="50" y="55" class="subtext">Year: 2023 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Reaction Mechanisms: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">Draw mechanism for:</text>
+                            <text x="70" y="165" class="formula">CH₃CH₂Br + OH⁻ → CH₃CH₂OH + Br⁻</text>
+                            <text x="70" y="190" class="subtext">Explain SN1 vs SN2 mechanism factors</text>
+                            
+                            <text x="50" y="235" class="question">Q2. Stereochemistry: [20 marks]</text>
+                            <text x="70" y="265" class="subtext">Identify R/S configuration:</text>
+                            <text x="70" y="290" class="formula">CHBrClF-COOH</text>
+                            <text x="70" y="315" class="subtext">Draw Fischer projections and Newman projections</text>
+                            
+                            <text x="50" y="360" class="question">Q3. Aromatic Chemistry: [20 marks]</text>
+                            <text x="70" y="390" class="formula">Benzene + CH₃COCl → AlCl₃</text>
+                            <text x="70" y="415" class="subtext">Friedel-Crafts acylation mechanism</text>
+                            <text x="70" y="440" class="subtext">Explain directing effects of substituents</text>
+                            
+                            <text x="50" y="485" class="question">Q4. Spectroscopy: [20 marks]</text>
+                            <text x="70" y="515" class="subtext">Analyze NMR spectrum:</text>
+                            <text x="70" y="540" class="formula">C₄H₈O₂: δ 1.3 (t), 2.6 (q), 11.5 (s)</text>
+                            <text x="70" y="565" class="subtext">Identify compound and explain splitting patterns</text>
+                            
+                            <text x="50" y="610" class="question">Q5. Synthesis: [15 marks]</text>
+                            <text x="70" y="640" class="subtext">Propose synthesis route:</text>
+                            <text x="70" y="665" class="formula">Benzene → p-nitroaniline</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 4,
+            subject: "Computer Science",
+            school: "SOCSE",
+            pages: [
+                {
+                    name: "cs-2024-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .code { font-size: 12px; font-family: 'Courier New', monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#e6ffe6"/>
+                            <text x="300" y="35" class="header">DATA STRUCTURES & ALGORITHMS</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Binary Trees: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">Implement AVL tree insertion algorithm</text>
+                            <rect x="70" y="155" width="460" height="80" fill="#f8f8f8" stroke="#ccc" stroke-width="1"/>
+                            <text x="80" y="175" class="code">class AVLNode:</text>
+                            <text x="90" y="195" class="code">def __init__(self, key):</text>
+                            <text x="110" y="215" class="code">self.key = key</text>
+                            <text x="110" y="235" class="code">self.height = 1</text>
+                            
+                            <text x="50" y="270" class="question">Q2. Graph Algorithms: [25 marks]</text>
+                            <text x="70" y="300" class="subtext">Implement Dijkstra's shortest path algorithm</text>
+                            <text x="70" y="325" class="subtext">Analyze time complexity: O(V²) vs O((V+E)logV)</text>
+                            
+                            <text x="50" y="370" class="question">Q3. Dynamic Programming: [20 marks]</text>
+                            <text x="70" y="400" class="subtext">Solve: Longest Common Subsequence (LCS)</text>
+                            <text x="70" y="425" class="subtext">String1: "ABCDGH", String2: "AEDFHR"</text>
+                            <text x="70" y="450" class="subtext">Show DP table and trace back solution</text>
+                            
+                            <text x="50" y="495" class="question">Q4. Hashing: [15 marks]</text>
+                            <text x="70" y="525" class="subtext">Design hash table with collision resolution</text>
+                            <text x="70" y="550" class="subtext">Compare: Linear probing vs Chaining</text>
+                            
+                            <text x="50" y="595" class="question">Q5. Sorting Analysis: [15 marks]</text>
+                            <text x="70" y="625" class="subtext">Compare merge sort vs quick sort</text>
+                            <text x="70" y="650" class="subtext">Best/Average/Worst case complexities</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 2</text>
+                        </svg>
+                    `),
+                    size: 2048
+                },
+                {
+                    name: "cs-2024-page2.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .code { font-size: 12px; font-family: 'Courier New', monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            
+                            <text x="50" y="50" class="question">Q6. Database Systems: [25 marks]</text>
+                            <text x="70" y="80" class="subtext">Normalize the following relation to 3NF:</text>
+                            <rect x="70" y="100" width="460" height="100" fill="#f0f8ff" stroke="#000" stroke-width="1"/>
+                            <text x="80" y="120" class="code">STUDENT(ID, Name, Course, Instructor, Room, Time)</text>
+                            <text x="80" y="140" class="subtext">Dependencies:</text>
+                            <text x="80" y="160" class="code">ID → Name, Course</text>
+                            <text x="80" y="180" class="code">Course → Instructor, Room, Time</text>
+                            
+                            <text x="50" y="235" class="question">Q7. Operating Systems: [20 marks]</text>
+                            <text x="70" y="265" class="subtext">Banker's Algorithm for Deadlock Avoidance</text>
+                            <text x="70" y="290" class="subtext">Given: 3 processes, 3 resource types</text>
+                            <text x="70" y="315" class="code">Available = [3, 3, 2]</text>
+                            <text x="70" y="340" class="code">Max = [[7,5,3], [3,2,2], [9,0,2]]</text>
+                            
+                            <text x="50" y="385" class="question">Q8. Network Protocols: [15 marks]</text>
+                            <text x="70" y="415" class="subtext">Explain TCP vs UDP</text>
+                            <text x="70" y="440" class="subtext">Sliding window protocol mechanism</text>
+                            <text x="70" y="465" class="subtext">Calculate throughput for given parameters</text>
+                            
+                            <text x="50" y="510" class="question">Q9. Machine Learning: [15 marks]</text>
+                            <text x="70" y="540" class="subtext">K-means clustering algorithm</text>
+                            <text x="70" y="565" class="subtext">Given points: (2,3), (3,4), (8,7), (9,8)</text>
+                            <text x="70" y="590" class="subtext">K=2, initial centroids: (3,3), (8,8)</text>
+                            
+                            <rect x="50" y="620" width="500" height="80" fill="#fffacd" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="645" text-anchor="middle" class="question">PROGRAMMING LANGUAGES ALLOWED</text>
+                            <text x="70" y="670" class="subtext">C/C++, Java, Python, JavaScript</text>
+                            <text x="70" y="690" class="subtext">Pseudocode is acceptable for algorithm questions</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 2 of 2 - END</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 2
+        },
+        {
+            id: 5,
+            subject: "Biology",
+            school: "SOBT",
+            pages: [
+                {
+                    name: "biology-2023-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-style: italic; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#e6ffe6"/>
+                            <text x="300" y="35" class="header">MOLECULAR BIOLOGY</text>
+                            <text x="50" y="55" class="subtext">Year: 2023 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. DNA Replication: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">Explain the mechanism of DNA replication</text>
+                            <text x="70" y="165" class="subtext">Role of: DNA polymerase, helicase, primase</text>
+                            <text x="70" y="190" class="subtext">Differences between leading and lagging strands</text>
+                            
+                            <text x="50" y="235" class="question">Q2. Protein Synthesis: [25 marks]</text>
+                            <text x="70" y="265" class="subtext">Transcription and Translation process</text>
+                            <text x="70" y="290" class="formula">DNA → RNA → Protein</text>
+                            <text x="70" y="315" class="subtext">Role of ribosomes, tRNA, and mRNA</text>
+                            
+                            <text x="50" y="360" class="question">Q3. Gene Regulation: [20 marks]</text>
+                            <text x="70" y="390" class="subtext">Lac operon mechanism in E. coli</text>
+                            <text x="70" y="415" class="subtext">Positive and negative regulation</text>
+                            <text x="70" y="440" class="subtext">Role of CAP-cAMP complex</text>
+                            
+                            <text x="50" y="485" class="question">Q4. Cell Cycle: [20 marks]</text>
+                            <text x="70" y="515" class="subtext">Phases: G1, S, G2, M</text>
+                            <text x="70" y="540" class="subtext">Checkpoints and their importance</text>
+                            <text x="70" y="565" class="subtext">p53 protein and cancer development</text>
+                            
+                            <text x="50" y="610" class="question">Q5. Genetic Engineering: [10 marks]</text>
+                            <text x="70" y="640" class="subtext">CRISPR-Cas9 mechanism</text>
+                            <text x="70" y="665" class="subtext">Applications in gene therapy</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 6,
+            subject: "Engineering Mechanics",
+            school: "SOME",
+            pages: [
+                {
+                    name: "mechanics-2024-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#f0e6ff"/>
+                            <text x="300" y="35" class="header">ENGINEERING MECHANICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Statics - Force Analysis: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">A beam ABC is supported at A (pin) and B (roller)</text>
+                            <text x="70" y="165" class="subtext">Load: 500N at 30° at point C</text>
+                            <text x="70" y="190" class="subtext">Length AB = 4m, BC = 2m</text>
+                            <text x="70" y="215" class="subtext">Find: Reactions at A and B</text>
+                            
+                            <text x="50" y="260" class="question">Q2. Dynamics - Motion Analysis: [25 marks]</text>
+                            <text x="70" y="290" class="formula">v = u + at</text>
+                            <text x="70" y="315" class="formula">s = ut + (1/2)at²</text>
+                            <text x="70" y="340" class="subtext">Projectile motion: θ = 45°, u = 20 m/s</text>
+                            <text x="70" y="365" class="subtext">Find: Range, maximum height, time of flight</text>
+                            
+                            <text x="50" y="410" class="question">Q3. Friction: [20 marks]</text>
+                            <text x="70" y="440" class="subtext">Block on inclined plane: μ = 0.3, θ = 30°</text>
+                            <text x="70" y="465" class="subtext">Mass = 50 kg, g = 9.81 m/s²</text>
+                            <text x="70" y="490" class="subtext">Will the block slide? Find acceleration.</text>
+                            
+                            <text x="50" y="535" class="question">Q4. Moment and Torque: [20 marks]</text>
+                            <text x="70" y="565" class="formula">M = F × d</text>
+                            <text x="70" y="590" class="subtext">Wrench problem: Force = 200N, arm = 0.3m</text>
+                            <text x="70" y="615" class="subtext">Find resultant moment about pivot point</text>
+                            
+                            <text x="50" y="660" class="question">Q5. Energy Methods: [10 marks]</text>
+                            <text x="70" y="690" class="formula">KE + PE = Constant</text>
+                            <text x="70" y="715" class="subtext">Apply to pendulum motion</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 7,
+            subject: "Statistics",
+            school: "SOMS",
+            pages: [
+                {
+                    name: "statistics-2023-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#ffe6f0"/>
+                            <text x="300" y="35" class="header">PROBABILITY &amp; STATISTICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2023 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Probability Distributions: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">Normal Distribution: μ = 100, σ = 15</text>
+                            <text x="70" y="165" class="formula">P(X &lt; 120) = ?</text>
+                            <text x="70" y="190" class="subtext">Use Z-score transformation</text>
+                            
+                            <text x="50" y="235" class="question">Q2. Hypothesis Testing: [25 marks]</text>
+                            <text x="70" y="265" class="formula">H₀: μ = 50 vs H₁: μ ≠ 50</text>
+                            <text x="70" y="290" class="subtext">Sample: n = 25, x̄ = 52, s = 8</text>
+                            <text x="70" y="315" class="subtext">Test at α = 0.05 level</text>
+                            
+                            <text x="50" y="360" class="question">Q3. Regression Analysis: [20 marks]</text>
+                            <text x="70" y="390" class="formula">y = a + bx</text>
+                            <text x="70" y="415" class="subtext">Data: (1,2), (2,4), (3,5), (4,7), (5,8)</text>
+                            <text x="70" y="440" class="subtext">Find: Correlation coefficient and regression line</text>
+                            
+                            <text x="50" y="485" class="question">Q4. ANOVA: [20 marks]</text>
+                            <text x="70" y="515" class="subtext">One-way ANOVA with 3 groups</text>
+                            <text x="70" y="540" class="subtext">Test equality of means at α = 0.01</text>
+                            <text x="70" y="565" class="formula">F = MST/MSE</text>
+                            
+                            <text x="50" y="610" class="question">Q5. Sampling: [10 marks]</text>
+                            <text x="70" y="640" class="subtext">Central Limit Theorem application</text>
+                            <text x="70" y="665" class="subtext">Sample size determination for given precision</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 8,
+            subject: "Thermodynamics",
+            school: "SOMS",
+            pages: [
+                {
+                    name: "thermo-2024-page1.jpg",
+                    data: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCADIAMgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUWEHInGBEzKRobHBFCNCUtHwM2JygsGSs+EVJzc3Nie0tLXG1OT05jVnlJhgllT0cOOSJKqRlJW3tyUl5MRq8G2SlWoKVjU14+JjM7YmS3lKZWZlf/aAAwDAQACEQMRAD8A+f6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9k=",
+                    size: 3072
+                },
+                {
+                    name: "thermo-2024-page2.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#fff5e6"/>
+                            <text x="300" y="35" class="header">THERMODYNAMICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. First Law of Thermodynamics: [25 marks]</text>
+                            <text x="70" y="140" class="formula">ΔU = Q - W</text>
+                            <text x="70" y="165" class="subtext">A gas expands from 2L to 5L at constant pressure</text>
+                            <text x="70" y="190" class="subtext">P = 3 atm, calculate work done and heat transfer</text>
+                            
+                            <text x="50" y="235" class="question">Q2. Carnot Cycle: [25 marks]</text>
+                            <text x="70" y="265" class="formula">η = 1 - T₂/T₁</text>
+                            <text x="70" y="290" class="subtext">Hot reservoir: 800K, Cold reservoir: 300K</text>
+                            <text x="70" y="315" class="subtext">Calculate efficiency and coefficient of performance</text>
+                            
+                            <text x="50" y="360" class="question">Q3. Entropy Change: [20 marks]</text>
+                            <text x="70" y="390" class="formula">ΔS = ∫(dQ/T)</text>
+                            <text x="70" y="415" class="subtext">Reversible isothermal process at 400K</text>
+                            <text x="70" y="440" class="subtext">Heat added = 2000 J, find entropy change</text>
+                            
+                            <text x="50" y="485" class="question">Q4. Ideal Gas Relations: [20 marks]</text>
+                            <text x="70" y="515" class="formula">PV = nRT</text>
+                            <text x="70" y="540" class="subtext">Adiabatic process: PVγ = constant</text>
+                            <text x="70" y="565" class="subtext">Initial: P₁=2atm, V₁=10L, Final: V₂=20L</text>
+                            
+                            <text x="50" y="610" class="question">Q5. Heat Engines: [10 marks]</text>
+                            <text x="70" y="640" class="subtext">Otto cycle efficiency calculation</text>
+                            <text x="70" y="665" class="subtext">Compression ratio r = 8, γ = 1.4</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 2 of 2</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 2
+        },
+        {
+            id: 9,
+            subject: "Digital Electronics",
+            school: "SOECE",
+            pages: [
+                {
+                    name: "digital-2023-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#e6f2ff"/>
+                            <text x="300" y="35" class="header">DIGITAL ELECTRONICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2023 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Boolean Algebra: [25 marks]</text>
+                            <text x="70" y="140" class="formula">F = AB + A'C + BC</text>
+                            <text x="70" y="165" class="subtext">Simplify using K-map and draw logic circuit</text>
+                            <text x="70" y="190" class="subtext">Implement using NAND gates only</text>
+                            
+                            <!-- K-map visualization -->
+                            <rect x="70" y="210" width="200" height="120" fill="#f0f8ff" stroke="#000" stroke-width="1"/>
+                            <text x="170" y="230" text-anchor="middle" class="subtext">K-Map</text>
+                            <line x1="120" y1="240" x2="120" y2="320" stroke="#000" stroke-width="1"/>
+                            <line x1="220" y1="240" x2="220" y2="320" stroke="#000" stroke-width="1"/>
+                            <line x1="70" y1="260" x2="270" y2="260" stroke="#000" stroke-width="1"/>
+                            <line x1="70" y1="300" x2="270" y2="300" stroke="#000" stroke-width="1"/>
+                            
+                            <text x="50" y="360" class="question">Q2. Sequential Circuits: [25 marks]</text>
+                            <text x="70" y="390" class="subtext">Design 3-bit synchronous counter</text>
+                            <text x="70" y="415" class="subtext">Using JK flip-flops, draw state diagram</text>
+                            <text x="70" y="440" class="subtext">Count sequence: 0→2→4→6→1→3→5→7→0</text>
+                            
+                            <text x="50" y="485" class="question">Q3. Combinational Logic: [20 marks]</text>
+                            <text x="70" y="515" class="subtext">Design 4-to-1 multiplexer using gates</text>
+                            <text x="70" y="540" class="subtext">Truth table and implementation</text>
+                            
+                            <text x="50" y="585" class="question">Q4. Memory Systems: [20 marks]</text>
+                            <text x="70" y="615" class="subtext">ROM vs RAM characteristics</text>
+                            <text x="70" y="640" class="subtext">Address decoding for 8K×8 memory</text>
+                            
+                            <text x="50" y="685" class="question">Q5. ADC/DAC: [10 marks]</text>
+                            <text x="70" y="715" class="subtext">Flash ADC vs Successive approximation</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 10,
+            subject: "Microprocessors",
+            school: "SOCSE",
+            pages: [
+                {
+                    name: "micro-2024-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .code { font-size: 12px; font-family: 'Courier New', monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#f0fff0"/>
+                            <text x="300" y="35" class="header">MICROPROCESSORS 8085</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. 8085 Architecture: [25 marks]</text>
+                            <text x="70" y="140" class="subtext">Draw block diagram of 8085 microprocessor</text>
+                            <text x="70" y="165" class="subtext">Explain function of ALU, registers, and control unit</text>
+                            <text x="70" y="190" class="subtext">Pin diagram and signal descriptions</text>
+                            
+                            <text x="50" y="235" class="question">Q2. Assembly Programming: [25 marks]</text>
+                            <text x="70" y="265" class="subtext">Write 8085 program to find largest number in array</text>
+                            <rect x="70" y="285" width="460" height="100" fill="#f8f8f8" stroke="#ccc" stroke-width="1"/>
+                            <text x="80" y="305" class="code">ORG 2000H</text>
+                            <text x="80" y="325" class="code">LXI H, 3000H    ; Load array address</text>
+                            <text x="80" y="345" class="code">MOV C, M        ; Load count</text>
+                            <text x="80" y="365" class="code">INX H           ; Point to first element</text>
+                            
+                            <text x="50" y="410" class="question">Q3. Addressing Modes: [20 marks]</text>
+                            <text x="70" y="440" class="subtext">Explain with examples:</text>
+                            <text x="70" y="465" class="code">MOV A, B        ; Register addressing</text>
+                            <text x="70" y="490" class="code">MVI A, 05H      ; Immediate addressing</text>
+                            <text x="70" y="515" class="code">LDA 2000H       ; Direct addressing</text>
+                            <text x="70" y="540" class="code">MOV A, M        ; Indirect addressing</text>
+                            
+                            <text x="50" y="585" class="question">Q4. Interrupts: [20 marks]</text>
+                            <text x="70" y="615" class="subtext">Types: RST 7.5, RST 6.5, RST 5.5, INTR, TRAP</text>
+                            <text x="70" y="640" class="subtext">Priority and vector addresses</text>
+                            <text x="70" y="665" class="subtext">Interrupt service routine structure</text>
+                            
+                            <text x="50" y="710" class="question">Q5. Memory Interfacing: [10 marks]</text>
+                            <text x="70" y="740" class="subtext">Interface 8K ROM and 8K RAM with 8085</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 11,
+            subject: "Control Systems",
+            school: "SOECE",
+            pages: [
+                {
+                    name: "control-2023-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#ffe6f7"/>
+                            <text x="300" y="35" class="header">CONTROL SYSTEMS</text>
+                            <text x="50" y="55" class="subtext">Year: 2023 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Transfer Functions: [25 marks]</text>
+                            <text x="70" y="140" class="formula">G(s) = Y(s)/X(s)</text>
+                            <text x="70" y="165" class="subtext">Find transfer function of RC circuit</text>
+                            <text x="70" y="190" class="subtext">R = 10kΩ, C = 0.1μF</text>
+                            <text x="70" y="215" class="subtext">Draw Bode plot for magnitude and phase</text>
+                            
+                            <text x="50" y="260" class="question">Q2. Stability Analysis: [25 marks]</text>
+                            <text x="70" y="290" class="formula">1 + G(s)H(s) = 0</text>
+                            <text x="70" y="315" class="subtext">Routh-Hurwitz stability criterion</text>
+                            <text x="70" y="340" class="formula">s³ + 4s² + 5s + K = 0</text>
+                            <text x="70" y="365" class="subtext">Find range of K for stable system</text>
+                            
+                            <text x="50" y="410" class="question">Q3. Root Locus: [20 marks]</text>
+                            <text x="70" y="440" class="formula">G(s) = K/[s(s+2)(s+4)]</text>
+                            <text x="70" y="465" class="subtext">Sketch root locus plot</text>
+                            <text x="70" y="490" class="subtext">Find breakaway points and angles</text>
+                            
+                            <text x="50" y="535" class="question">Q4. PID Controllers: [20 marks]</text>
+                            <text x="70" y="565" class="formula">Gc(s) = Kp + Ki/s + Kds</text>
+                            <text x="70" y="590" class="subtext">Design PID for unit step input</text>
+                            <text x="70" y="615" class="subtext">Desired: ess = 0, %OS < 20%, ts < 2sec</text>
+                            
+                            <text x="50" y="660" class="question">Q5. Nyquist Plot: [10 marks]</text>
+                            <text x="70" y="690" class="subtext">Stability margins: gain and phase</text>
+                            <text x="70" y="715" class="subtext">Encirclement criterion application</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        },
+        {
+            id: 12,
+            subject: "Fluid Mechanics",
+            school: "SOME",
+            pages: [
+                {
+                    name: "fluid-2024-page1.jpg",
+                    data: "data:image/svg+xml;base64," + btoa(`
+                        <svg width="600" height="800" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <style>
+                                    .header { font-size: 24px; font-weight: bold; text-anchor: middle; }
+                                    .question { font-size: 16px; font-weight: bold; }
+                                    .subtext { font-size: 14px; }
+                                    .formula { font-size: 13px; font-family: monospace; }
+                                </style>
+                            </defs>
+                            <rect width="100%" height="100%" fill="#ffffff" stroke="#000" stroke-width="2"/>
+                            <rect x="0" y="0" width="100%" height="60" fill="#e6fff2"/>
+                            <text x="300" y="35" class="header">FLUID MECHANICS</text>
+                            <text x="50" y="55" class="subtext">Year: 2024 | Duration: 3 hours | Max Marks: 100</text>
+                            
+                            <text x="50" y="110" class="question">Q1. Bernoulli's Equation: [25 marks]</text>
+                            <text x="70" y="140" class="formula">P₁/ρg + v₁²/2g + z₁ = P₂/ρg + v₂²/2g + z₂</text>
+                            <text x="70" y="165" class="subtext">Water flows through pipe: D₁=20cm, D₂=10cm</text>
+                            <text x="70" y="190" class="subtext">P₁=300kPa, v₁=2m/s, h₁-h₂=5m</text>
+                            <text x="70" y="215" class="subtext">Find: P₂ and v₂</text>
+                            
+                            <text x="50" y="260" class="question">Q2. Viscous Flow: [25 marks]</text>
+                            <text x="70" y="290" class="formula">τ = μ(du/dy)</text>
+                            <text x="70" y="315" class="subtext">Couette flow between parallel plates</text>
+                            <text x="70" y="340" class="subtext">Gap = 2mm, μ = 0.001 Pa·s</text>
+                            <text x="70" y="365" class="subtext">Upper plate velocity = 5 m/s</text>
+                            
+                            <text x="50" y="410" class="question">Q3. Reynolds Number: [20 marks]</text>
+                            <text x="70" y="440" class="formula">Re = ρVD/μ = VD/ν</text>
+                            <text x="70" y="465" class="subtext">Pipe flow: D=50mm, V=3m/s</text>
+                            <text x="70" y="490" class="subtext">ν = 1.5×10⁻⁶ m²/s</text>
+                            <text x="70" y="515" class="subtext">Determine flow regime and friction factor</text>
+                            
+                            <text x="50" y="560" class="question">Q4. Boundary Layer: [20 marks]</text>
+                            <text x="70" y="590" class="subtext">Flat plate boundary layer thickness</text>
+                            <text x="70" y="615" class="formula">δ = 5x/√(Re_x)</text>
+                            <text x="70" y="640" class="subtext">x = 1m from leading edge, U = 10 m/s</text>
+                            
+                            <text x="50" y="685" class="question">Q5. Pump Performance: [10 marks]</text>
+                            <text x="70" y="715" class="subtext">Head-discharge characteristics</text>
+                            <text x="70" y="740" class="subtext">NPSH and cavitation analysis</text>
+                            
+                            <line x1="50" y1="750" x2="550" y2="750" stroke="#000" stroke-width="1"/>
+                            <text x="300" y="770" text-anchor="middle" class="subtext">Page 1 of 1</text>
+                        </svg>
+                    `),
+                    size: 2048
+                }
+            ],
+            uploadDate: new Date().toISOString(),
+            totalPages: 1
+        }
+    ];
+
+    this.papers = samplePapers;
+    this.savePapers();
+    this.renderPapers();
+    this.populateFilters();
+};
+
+// Additional protection measures
+(function() {
+    // Disable common developer shortcuts
+    const disabledKeys = ['F12', 'I', 'C', 'J', 'U', 'S'];
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && (e.shiftKey || e.altKey)) {
+            disabledKeys.forEach(key => {
+                if (e.key.toUpperCase() === key) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+    });
+
+    // Disable text selection on images
+    document.addEventListener('selectstart', function(e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+        }
+    });
+
+    // Clear console periodically
+    setInterval(() => {
+        console.clear();
+    }, 5000);
+
+    // Obfuscate source viewing attempts
+    Object.defineProperty(document, 'body', {
+        get: function() {
+            return document.getElementsByTagName('body')[0];
+        }
+    });
+})();

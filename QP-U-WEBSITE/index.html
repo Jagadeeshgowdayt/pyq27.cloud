@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PYQ 27 CLOUD - Late Night Study</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/protection.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-book-open"></i> PYQ 27 CLOUD</h1>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search papers by subject or school..." autocomplete="off">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Filter Section -->
+            <div class="filters">
+                <select id="yearFilter">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+
+            <!-- Papers Grid -->
+            <div class="papers-grid" id="papersGrid">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading question papers...</p>
+                </div>
+            </div>
+
+            <!-- No Results -->
+            <div class="no-results" id="noResults" style="display: none;">
+                <i class="fas fa-search"></i>
+                <h3>No papers found</h3>
+                <p>Try adjusting your search criteria</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Paper Viewer Modal -->
+    <div id="paperModal" class="modal">
+        <div class="modal-content paper-modal">
+            <div class="viewer-header">
+                <span class="paper-title" id="viewerTitle"></span>
+                <span class="close viewer-close">&times;</span>
+            </div>
+            
+            <div class="viewer-body">
+                <button class="nav-btn prev-btn" id="prevBtn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <div class="image-container" id="imageContainer">
+                    <img id="currentImage" src="" alt="Question Paper Page" draggable="false">
+                    <div class="page-overlay" id="pageOverlay"></div>
+                </div>
+                
+                <button class="nav-btn next-btn" id="nextBtn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <div class="viewer-footer">
+                <span class="page-counter" id="pageCounter"></span>
+                <div class="viewer-controls">
+                    <button class="control-btn" id="shareWhatsAppBtn" title="Share on WhatsApp">
+                        <i class="fab fa-whatsapp"></i> Share
+                    </button>
+                    <button class="control-btn" id="zoomOutBtn"><i class="fas fa-search-minus"></i></button>
+                    <button class="control-btn" id="zoomInBtn"><i class="fas fa-search-plus"></i></button>
+                    <button class="control-btn" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="container">
+            <!-- Share CTA -->
+            <div class="footer-share">
+                <div class="share-icon">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+                <p class="share-message">Found a helpful paper? Share it with your friends on WhatsApp!</p>
+            </div>
+            
+            <!-- Divider -->
+            <div class="footer-divider"></div>
+            
+            <!-- Credits -->
+            <div class="footer-credits">
+                <p class="free-message">
+                    <i class="fas fa-heart"></i> 
+                    <strong>100% FREE</strong> - Everything here is completely free!
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
