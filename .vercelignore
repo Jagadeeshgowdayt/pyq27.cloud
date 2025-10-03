@@ -1,0 +1,31 @@
+# Vercel Ignore - Files to exclude from deployment
+
+# Development files
+*.backup
+*.old
+*.corrupted
+.env
+
+# Test files
+test-*.html
+debug-*.html
+diagnose.html
+verify-*.html
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git/
+.github/
+
+# Node modules (if any)
+node_modules/
+
+# Build artifacts
+.dist/
+
+# Editor files
+.vscode/
+.idea/
