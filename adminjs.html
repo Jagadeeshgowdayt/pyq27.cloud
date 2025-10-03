@@ -347,6 +347,7 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-papers-db.js"></script>
 
     <script>
         // Global variables
@@ -897,7 +898,21 @@
                 
                 updateProgress(95);
                 
-                // Save all papers to localStorage
+                // Save all papers to Supabase database AND localStorage
+                log('uploadResult', `💾 Saving to database...`, 'info');
+                
+                try {
+                    // Save each paper to Supabase database
+                    for (const paper of allPapers) {
+                        await supabasePapersDB.createPaper(paper);
+                    }
+                    log('uploadResult', `✅ Saved to database successfully!`, 'success');
+                } catch (dbError) {
+                    console.error('Database save error:', dbError);
+                    log('uploadResult', `⚠️ Database save failed, saved to localStorage only`, 'warning');
+                }
+                
+                // Also save to localStorage as backup
                 papers.push(...allPapers);
                 localStorage.setItem('questionPapers', JSON.stringify(papers));
                 
@@ -930,8 +945,22 @@
         }
 
         // 3. Paper Management
-        function loadAllPapers() {
-            papers = JSON.parse(localStorage.getItem('questionPapers')) || [];
+        async function loadAllPapers() {
+            try {
+                // Load from Supabase database
+                papers = await supabasePapersDB.getAllPapers();
+                console.log(`Loaded ${papers.length} papers from database`);
+                
+                // Also sync to localStorage
+                if (papers.length > 0) {
+                    localStorage.setItem('questionPapers', JSON.stringify(papers));
+                }
+            } catch (error) {
+                console.error('Failed to load from database:', error);
+                // Fallback to localStorage
+                papers = JSON.parse(localStorage.getItem('questionPapers')) || [];
+                console.log(`Loaded ${papers.length} papers from localStorage (offline mode)`);
+            }
             
             clearLog('papersResult');
             log('papersResult', `📚 Loading papers from storage...`, 'info');

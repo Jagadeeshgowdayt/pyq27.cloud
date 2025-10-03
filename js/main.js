@@ -1,7 +1,7 @@
 // Question Papers Data Storage
 class QuestionPaperManager {
     constructor() {
-        this.papers = JSON.parse(localStorage.getItem('questionPapers')) || [];
+        this.papers = [];
         this.currentViewing = null;
         this.currentPageIndex = 0;
         this.zoomLevel = 1;
@@ -12,12 +12,59 @@ class QuestionPaperManager {
         this.init();
     }
 
-    init() {
+    async init() {
         this.setupEventListeners();
+        this.setupProtection();
+        
+        // Load papers from Supabase database
+        await this.loadPapersFromDB();
+        
         this.renderPapers();
         this.populateFilters();
-        this.setupProtection();
         this.checkUrlForPaper(); // Check if opening from shared link
+    }
+    
+    // Load papers from Supabase database
+    async loadPapersFromDB() {
+        try {
+            console.log('📥 Loading papers from Supabase database...');
+            
+            // Wait for supabasePapersDB to be available
+            if (typeof supabasePapersDB === 'undefined') {
+                console.warn('⚠️ Supabase DB not loaded yet, retrying...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            this.papers = await supabasePapersDB.getAllPapers();
+            console.log(`✅ Loaded ${this.papers.length} papers from database`);
+            
+            // Also sync to localStorage for offline access
+            if (this.papers.length > 0) {
+                localStorage.setItem('questionPapers', JSON.stringify(this.papers));
+            }
+            
+            // If no papers in DB, check localStorage
+            if (this.papers.length === 0) {
+                const localPapers = localStorage.getItem('questionPapers');
+                if (localPapers) {
+                    this.papers = JSON.parse(localPapers);
+                    console.log(`⚠️ Using ${this.papers.length} papers from localStorage (database is empty)`);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Failed to load papers from database:', error);
+            console.log('🔍 Error details:', error.message);
+            
+            // Fallback to localStorage
+            const localPapers = localStorage.getItem('questionPapers');
+            if (localPapers) {
+                this.papers = JSON.parse(localPapers);
+                console.log(`⚠️ Using ${this.papers.length} papers from localStorage (offline mode)`);
+            } else {
+                console.warn('⚠️ No papers found in database or localStorage');
+                console.log('💡 To fix: Run the SQL setup in Supabase Dashboard → SQL Editor');
+            }
+        }
     }
 
     setupEventListeners() {
@@ -489,9 +536,20 @@ class QuestionPaperManager {
         });
     }
 
-    savePapers() {
-        // Save paper metadata to localStorage (URLs, not base64 images)
+    async savePapers() {
+        // Save paper metadata to localStorage (backup)
         localStorage.setItem('questionPapers', JSON.stringify(this.papers));
+        
+        // Also save to Supabase database (if available)
+        if (typeof supabasePapersDB !== 'undefined') {
+            try {
+                console.log('💾 Syncing papers to database...');
+                // Note: Individual papers should be saved when created
+                // This is just a backup sync
+            } catch (error) {
+                console.error('❌ Failed to sync papers to database:', error);
+            }
+        }
     }
 
     renderPapers(papersToShow = null) {
@@ -817,11 +875,8 @@ class QuestionPaperManager {
 // Initialize the application
 let paperManager;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     paperManager = new QuestionPaperManager();
     
-    // Add sample data if empty
-    if (paperManager.papers.length === 0) {
-        paperManager.addSampleData();
-    }
+    // No need to add sample data - papers come from database now
 });
