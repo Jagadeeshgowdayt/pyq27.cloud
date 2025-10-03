@@ -29,18 +29,34 @@ class QuestionPaperManager {
         try {
             console.log('📥 Loading papers from Supabase database...');
             
-            // Wait for supabasePapersDB to be available
-            if (typeof supabasePapersDB === 'undefined') {
-                console.warn('⚠️ Supabase DB not loaded yet, retrying...');
-                await new Promise(resolve => setTimeout(resolve, 500));
+            // Wait for all dependencies to be available
+            let retries = 0;
+            const maxRetries = 10;
+            
+            while ((typeof supabasePapersDB === 'undefined' || !supabasePapersDB) && retries < maxRetries) {
+                console.warn(`⚠️ Supabase DB not loaded yet, waiting... (${retries + 1}/${maxRetries})`);
+                
+                // Try to initialize if function exists
+                if (typeof initSupabasePapersDB === 'function') {
+                    initSupabasePapersDB();
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                retries++;
             }
             
+            if (typeof supabasePapersDB === 'undefined' || !supabasePapersDB) {
+                throw new Error('SupabasePapersDB failed to load after 3 seconds');
+            }
+            
+            console.log('✅ Supabase DB helper loaded, fetching papers...');
             this.papers = await supabasePapersDB.getAllPapers();
             console.log(`✅ Loaded ${this.papers.length} papers from database`);
             
             // Also sync to localStorage for offline access
             if (this.papers.length > 0) {
                 localStorage.setItem('questionPapers', JSON.stringify(this.papers));
+                console.log(`💾 Synced ${this.papers.length} papers to localStorage`);
             }
             
             // If no papers in DB, check localStorage
@@ -49,11 +65,14 @@ class QuestionPaperManager {
                 if (localPapers) {
                     this.papers = JSON.parse(localPapers);
                     console.log(`⚠️ Using ${this.papers.length} papers from localStorage (database is empty)`);
+                } else {
+                    console.warn('⚠️ No papers in database or localStorage');
                 }
             }
         } catch (error) {
             console.error('❌ Failed to load papers from database:', error);
             console.log('🔍 Error details:', error.message);
+            console.log('🔍 Error stack:', error.stack);
             
             // Fallback to localStorage
             const localPapers = localStorage.getItem('questionPapers');
@@ -62,7 +81,8 @@ class QuestionPaperManager {
                 console.log(`⚠️ Using ${this.papers.length} papers from localStorage (offline mode)`);
             } else {
                 console.warn('⚠️ No papers found in database or localStorage');
-                console.log('💡 To fix: Run the SQL setup in Supabase Dashboard → SQL Editor');
+                console.log('💡 To fix: Check Supabase Dashboard → SQL Editor');
+                console.log('💡 Or visit migrate-to-database.html to migrate papers');
             }
         }
     }

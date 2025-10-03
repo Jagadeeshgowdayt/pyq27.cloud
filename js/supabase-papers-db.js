@@ -41,6 +41,13 @@ class SupabasePapersDB {
     // Read/Get all papers
     async getAllPapers() {
         try {
+            console.log('🔍 Querying database table:', this.tableName);
+            
+            // Check if supabase is defined
+            if (typeof supabase === 'undefined') {
+                throw new Error('Supabase client is not initialized');
+            }
+            
             const { data, error } = await supabase
                 .from(this.tableName)
                 .select('*')
@@ -48,10 +55,17 @@ class SupabasePapersDB {
 
             if (error) {
                 console.error('❌ Error fetching papers:', error);
+                console.error('Error details:', JSON.stringify(error, null, 2));
                 throw error;
             }
 
-            console.log(`✅ Fetched ${data.length} papers from database`);
+            console.log(`✅ Fetched ${data ? data.length : 0} papers from database`);
+            
+            if (!data || data.length === 0) {
+                console.warn('⚠️ Database returned no papers');
+                console.log('💡 Check: Did you run the SQL setup? Did you migrate papers?');
+                return [];
+            }
             
             // Convert database format to app format
             return data.map(paper => ({
@@ -66,6 +80,8 @@ class SupabasePapersDB {
             }));
         } catch (error) {
             console.error('❌ Failed to fetch papers:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
             return [];
         }
     }
@@ -239,5 +255,25 @@ class SupabasePapersDB {
     }
 }
 
-// Create global instance
-const supabasePapersDB = new SupabasePapersDB();
+// Create global instance (wrapped in a function to ensure supabase is loaded)
+let supabasePapersDB;
+
+function initSupabasePapersDB() {
+    if (typeof supabase === 'undefined') {
+        console.error('❌ Cannot initialize SupabasePapersDB: supabase client not loaded');
+        return null;
+    }
+    
+    if (!supabasePapersDB) {
+        supabasePapersDB = new SupabasePapersDB();
+        console.log('✅ SupabasePapersDB initialized');
+    }
+    
+    return supabasePapersDB;
+}
+
+// Try to initialize immediately if supabase is already loaded
+if (typeof supabase !== 'undefined') {
+    supabasePapersDB = new SupabasePapersDB();
+    console.log('✅ SupabasePapersDB initialized on load');
+}
