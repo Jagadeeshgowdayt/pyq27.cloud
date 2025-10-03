@@ -2,18 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#1A1A1D">
+    <meta name="description" content="Access previous year question papers instantly. Mobile-optimized for fast studying.">
     <title>PYQ 27 CLOUD - Late Night Study</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/protection.css">
+    
+    <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Critical CSS will load first -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/protection.css">
+    
+    <!-- Font loading with display swap for better performance -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase-storage.js"></script>
+    
+    <!-- Supabase Client - defer loading -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script defer src="js/supabase-config.js"></script>
+    <script defer src="js/supabase-storage.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -21,8 +31,8 @@
         <div class="container">
             <h1><i class="fas fa-book-open"></i> PYQ 27 CLOUD</h1>
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search papers by subject or school..." autocomplete="off">
-                <button id="searchBtn"><i class="fas fa-search"></i></button>
+                <input type="search" id="searchInput" placeholder="Search papers..." autocomplete="off" inputmode="search">
+                <button id="searchBtn" aria-label="Search"><i class="fas fa-search"></i></button>
             </div>
         </div>
     </header>
@@ -30,49 +40,42 @@
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">
-            <!-- Filter Section -->
-            <div class="filters">
-                <select id="yearFilter">
-                    <option value="">All Years</option>
-                </select>
-            </div>
-
             <!-- Papers Grid -->
-            <div class="papers-grid" id="papersGrid">
+            <div class="papers-grid" id="papersGrid" role="list">
                 <div class="loading">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading question papers...</p>
+                    <p>Loading...</p>
                 </div>
             </div>
 
             <!-- No Results -->
-            <div class="no-results" id="noResults" style="display: none;">
+            <div class="no-results" id="noResults" style="display: none;" role="status">
                 <i class="fas fa-search"></i>
                 <h3>No papers found</h3>
-                <p>Try adjusting your search criteria</p>
+                <p>Try adjusting your search</p>
             </div>
         </div>
     </main>
 
     <!-- Paper Viewer Modal -->
-    <div id="paperModal" class="modal">
+    <div id="paperModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
         <div class="modal-content paper-modal">
             <div class="viewer-header">
                 <span class="paper-title" id="viewerTitle"></span>
-                <span class="close viewer-close">&times;</span>
+                <button class="close viewer-close" aria-label="Close viewer">&times;</button>
             </div>
             
             <div class="viewer-body">
-                <button class="nav-btn prev-btn" id="prevBtn">
+                <button class="nav-btn prev-btn" id="prevBtn" aria-label="Previous page">
                     <i class="fas fa-chevron-left"></i>
                 </button>
                 
                 <div class="image-container" id="imageContainer">
-                    <img id="currentImage" src="" alt="Question Paper Page" draggable="false">
+                    <img id="currentImage" src="" alt="Question Paper Page" draggable="false" loading="lazy">
                     <div class="page-overlay" id="pageOverlay"></div>
                 </div>
                 
-                <button class="nav-btn next-btn" id="nextBtn">
+                <button class="nav-btn next-btn" id="nextBtn" aria-label="Next page">
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
@@ -80,12 +83,12 @@
             <div class="viewer-footer">
                 <span class="page-counter" id="pageCounter"></span>
                 <div class="viewer-controls">
-                    <button class="control-btn" id="shareWhatsAppBtn" title="Share on WhatsApp">
-                        <i class="fab fa-whatsapp"></i> Share
+                    <button class="control-btn" id="shareWhatsAppBtn" title="Share on WhatsApp" aria-label="Share on WhatsApp">
+                        <i class="fab fa-whatsapp"></i> <span class="btn-text">Share</span>
                     </button>
-                    <button class="control-btn" id="zoomOutBtn"><i class="fas fa-search-minus"></i></button>
-                    <button class="control-btn" id="zoomInBtn"><i class="fas fa-search-plus"></i></button>
-                    <button class="control-btn" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                    <button class="control-btn" id="zoomOutBtn" aria-label="Zoom out"><i class="fas fa-search-minus"></i></button>
+                    <button class="control-btn" id="zoomInBtn" aria-label="Zoom in"><i class="fas fa-search-plus"></i></button>
+                    <button class="control-btn" id="fullscreenBtn" aria-label="Toggle fullscreen"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
         </div>
@@ -115,6 +118,6 @@
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script defer src="js/main.js"></script>
 </body>
 </html>

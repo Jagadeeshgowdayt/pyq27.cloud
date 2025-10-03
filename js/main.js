@@ -5,6 +5,10 @@ class QuestionPaperManager {
         this.currentViewing = null;
         this.currentPageIndex = 0;
         this.zoomLevel = 1;
+        
+        // Initialize Supabase Storage Manager
+        this.storageManager = new SupabaseStorageManager();
+        
         this.init();
     }
 
@@ -17,16 +21,27 @@ class QuestionPaperManager {
     }
 
     setupEventListeners() {
+        // Debounced search for better performance
+        const debouncedFilter = this.debounce(() => this.filterPapers(), 300);
+        
         // Search functionality
-        document.getElementById('searchInput').addEventListener('input', () => this.filterPapers());
+        document.getElementById('searchInput').addEventListener('input', debouncedFilter);
         document.getElementById('searchBtn').addEventListener('click', () => this.filterPapers());
         
-        // Filter dropdowns
-        document.getElementById('yearFilter').addEventListener('change', () => this.filterPapers());
+        // Enter key for search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.filterPapers();
+            }
+        });
 
-        // Modal close buttons (for viewer)
-        document.querySelectorAll('.close').forEach(btn => {
-            btn.addEventListener('click', (e) => this.closeModal(e.target.closest('.modal')));
+        // Modal close buttons
+        const closeButtons = document.querySelectorAll('.close');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal');
+                if (modal) this.closeModal(modal);
+            });
         });
 
         // Click outside modal to close
@@ -36,20 +51,13 @@ class QuestionPaperManager {
             }
         });
 
-        // Upload form (if exists on page - for admin panel)
-        const uploadForm = document.getElementById('uploadForm');
-        if (uploadForm) {
-            uploadForm.addEventListener('submit', (e) => this.handleUpload(e));
-        }
+        // Paper viewer controls - use event delegation
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
         
-        const paperFiles = document.getElementById('paperFiles');
-        if (paperFiles) {
-            paperFiles.addEventListener('change', (e) => this.previewFiles(e));
-        }
-
-        // Paper viewer controls
-        document.getElementById('prevBtn').addEventListener('click', () => this.previousPage());
-        document.getElementById('nextBtn').addEventListener('click', () => this.nextPage());
+        if (prevBtn) prevBtn.addEventListener('click', () => this.previousPage());
+        if (nextBtn) nextBtn.addEventListener('click', () => this.nextPage());
+        
         document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
         document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
         document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
@@ -60,6 +68,19 @@ class QuestionPaperManager {
 
         // Touch gestures for mobile
         this.setupTouchGestures();
+    }
+    
+    // Debounce function for performance
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     setupProtection() {
@@ -360,6 +381,14 @@ class QuestionPaperManager {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading to cloud...';
 
         try {
+            // Initialize storage manager
+            console.log('🔄 Initializing storage manager...');
+            const initSuccess = await this.storageManager.init();
+            if (!initSuccess) {
+                throw new Error('Storage manager initialization failed');
+            }
+            console.log('✅ Storage manager initialized successfully');
+
             let uploadedCount = 0;
 
             if (this.groupedFiles && Object.keys(this.groupedFiles).length > 0) {
@@ -370,7 +399,7 @@ class QuestionPaperManager {
                     
                     // Upload all files to Supabase Storage
                     const fileDataArray = paperData.files.map(f => f.file);
-                    const imageUrls = await storageManager.uploadMultipleImages(fileDataArray, folderPath);
+                    const imageUrls = await this.storageManager.uploadMultipleImages(fileDataArray, folderPath);
                     
                     const pages = imageUrls.map((url, index) => ({
                         name: paperData.files[index].file.name,
@@ -412,7 +441,7 @@ class QuestionPaperManager {
                 const folderPath = `papers/${paperId}`;
                 
                 // Upload all files to Supabase Storage
-                const imageUrls = await storageManager.uploadMultipleImages(files, folderPath);
+                const imageUrls = await this.storageManager.uploadMultipleImages(files, folderPath);
                 
                 const pages = imageUrls.map((url, index) => ({
                     name: files[index].name,
@@ -442,8 +471,9 @@ class QuestionPaperManager {
             this.groupedFiles = null;
             
         } catch (error) {
-            console.error('Upload error:', error);
-            alert('❌ Error uploading files. Please try again.');
+            console.error('❌ Upload error:', error);
+            console.error('Error details:', error);
+            alert(`❌ Upload failed: ${error.message}\n\nCheck browser console for details.`);
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Paper';
@@ -468,42 +498,76 @@ class QuestionPaperManager {
         const container = document.getElementById('papersGrid');
         const papers = papersToShow || this.papers;
 
+        // Clear container
+        container.innerHTML = '';
+
         if (papers.length === 0) {
             if (this.papers.length === 0) {
                 container.innerHTML = `
                     <div class="loading">
                         <i class="fas fa-book"></i>
                         <h3>No Papers Yet</h3>
-                        <p>Use the admin upload to add question papers</p>
+                        <p>Use admin panel to add papers</p>
                     </div>
                 `;
             } else {
                 document.getElementById('noResults').style.display = 'block';
-                container.innerHTML = '';
             }
             return;
         }
 
         document.getElementById('noResults').style.display = 'none';
         
-        container.innerHTML = papers.map(paper => `
-            <div class="paper-card" onclick="paperManager.openPaper(${paper.id})">
-                <button class="share-badge-btn" onclick="event.stopPropagation(); paperManager.quickShare(${paper.id})" title="Share">
-                    <i class="fas fa-share-alt"></i> Share
-                </button>
+        // Use DocumentFragment for better performance
+        const fragment = document.createDocumentFragment();
+        
+        papers.forEach(paper => {
+            const card = document.createElement('div');
+            card.className = 'paper-card';
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+            
+            // Create share button
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'share-badge-btn';
+            shareBtn.innerHTML = '<i class="fas fa-share-alt"></i> Share';
+            shareBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.quickShare(paper.id);
+            };
+            
+            // Create content
+            card.innerHTML = `
                 <h3>${this.escapeHtml(paper.subject)}</h3>
-                <div class="year">${paper.school || 'N/A'}</div>
                 <div class="info">
                     <span class="pages">
                         <i class="fas fa-file-image"></i>
                         ${paper.totalPages} page${paper.totalPages > 1 ? 's' : ''}
                     </span>
-                    <button class="view-btn" onclick="event.stopPropagation(); paperManager.openPaper(${paper.id})">
+                    <button class="view-btn">
                         <i class="fas fa-eye"></i> View
                     </button>
                 </div>
-            </div>
-        `).join('');
+            `;
+            
+            // Prepend share button
+            card.insertBefore(shareBtn, card.firstChild);
+            
+            // Add click handler
+            card.onclick = () => this.openPaper(paper.id);
+            
+            // Keyboard support
+            card.onkeypress = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.openPaper(paper.id);
+                }
+            };
+            
+            fragment.appendChild(card);
+        });
+        
+        container.appendChild(fragment);
     }
 
     escapeHtml(text) {
@@ -513,24 +577,17 @@ class QuestionPaperManager {
     }
 
     populateFilters() {
-        const schools = [...new Set(this.papers.map(paper => paper.school))].sort();
-
+        // Filters removed - no longer filtering by school
         const yearFilter = document.getElementById('yearFilter');
-
-        yearFilter.innerHTML = '<option value="">All Schools</option>' +
-            schools.map(school => `<option value="${school}">${school}</option>`).join('');
+        yearFilter.innerHTML = '<option value="">All Papers</option>';
     }
 
     filterPapers() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const schoolFilter = document.getElementById('yearFilter').value;
 
         const filteredPapers = this.papers.filter(paper => {
-            const matchesSearch = paper.subject.toLowerCase().includes(searchTerm) ||
-                                (paper.school && paper.school.toLowerCase().includes(searchTerm));
-            const matchesSchool = !schoolFilter || paper.school === schoolFilter;
-
-            return matchesSearch && matchesSchool;
+            const matchesSearch = paper.subject.toLowerCase().includes(searchTerm);
+            return matchesSearch;
         });
 
         this.renderPapers(filteredPapers);
@@ -544,7 +601,7 @@ class QuestionPaperManager {
         this.currentPageIndex = 0;
         this.zoomLevel = 1;
 
-        document.getElementById('viewerTitle').textContent = `${paper.subject} (${paper.school || 'N/A'})`;
+        document.getElementById('viewerTitle').textContent = paper.subject;
         document.getElementById('paperModal').style.display = 'block';
         
         this.updateViewer();
@@ -560,7 +617,7 @@ class QuestionPaperManager {
         if (!this.currentViewing) return;
         
         const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${this.currentViewing.id}`;
-        const message = `Check out this question paper: ${this.currentViewing.subject} (${this.currentViewing.school || 'N/A'})\n\n${shareUrl}`;
+        const message = `Check out this question paper: ${this.currentViewing.subject}\n\n${shareUrl}`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
@@ -571,7 +628,7 @@ class QuestionPaperManager {
         if (!paper) return;
         
         const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${paperId}`;
-        const message = `Check out this question paper: ${paper.subject} (${paper.school || 'N/A'})\n\n${shareUrl}`;
+        const message = `Check out this question paper: ${paper.subject}\n\n${shareUrl}`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
@@ -595,7 +652,26 @@ class QuestionPaperManager {
         const currentPage = this.currentViewing.pages[this.currentPageIndex];
         const img = document.getElementById('currentImage');
         
-        img.src = currentPage.data;
+        // Handle both old localStorage papers (data field) and new Supabase papers (url field)
+        const imageSrc = currentPage.url || currentPage.data;
+        if (imageSrc) {
+            img.src = imageSrc;
+            console.log('Loading image from:', imageSrc);
+            
+            // Add error handling for image loading
+            img.onerror = () => {
+                console.error('Failed to load image:', imageSrc);
+                img.alt = 'Failed to load image. Please check if the file exists.';
+            };
+            
+            img.onload = () => {
+                console.log('Image loaded successfully:', imageSrc);
+            };
+        } else {
+            console.error('No image source found for page:', currentPage);
+            img.alt = 'No image source available';
+        }
+        
         img.style.transform = `scale(${this.zoomLevel})`;
         
         document.getElementById('pageCounter').textContent = 
@@ -616,7 +692,23 @@ class QuestionPaperManager {
         console.log('Next page clicked', this.currentPageIndex, this.currentViewing?.pages?.length);
         if (this.currentViewing && this.currentPageIndex < this.currentViewing.pages.length - 1) {
             this.currentPageIndex++;
+            console.log('Advanced to page index', this.currentPageIndex);
             this.updateViewer();
+        } else {
+            console.warn('nextPage: cannot advance', {
+                currentViewing: this.currentViewing,
+                currentPageIndex: this.currentPageIndex,
+                totalPages: this.currentViewing ? this.currentViewing.pages.length : 0
+            });
+            // Safety: if pages exist but index not updating, try forcing update
+            if (this.currentViewing && this.currentViewing.pages && this.currentViewing.pages.length > 0) {
+                const attemptedIndex = Math.min(this.currentPageIndex + 1, this.currentViewing.pages.length - 1);
+                if (attemptedIndex !== this.currentPageIndex) {
+                    this.currentPageIndex = attemptedIndex;
+                    console.log('Forced advance to', this.currentPageIndex);
+                    this.updateViewer();
+                }
+            }
         }
     }
 

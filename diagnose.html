@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Diagnostics</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Diagnostics</h1>
+    
+    <div class="section">
+        <h2>Step 1: Check Configuration</h2>
+        <button onclick="checkConfig()">Check Config</button>
+        <div id="configResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Test Supabase Connection</h2>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 3: List All Buckets</h2>
+        <button onclick="listBuckets()">List Buckets</button>
+        <div id="bucketsResult"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 4: Try Creating Bucket</h2>
+        <button onclick="createBucket()">Create Bucket</button>
+        <div id="createResult"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Load config directly (don't rely on external file)
+        const SUPABASE_URL = 'https://qnxhmmubhfzmvfvmzbud.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFueGhtbXViaGZ6bXZmdm16YnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzUwNTIsImV4cCI6MjA3NTAxMTA1Mn0.LI7QKM0adkdMVgH9-JoY9YrHtAIXMen8GnqmDKKbfDo';
+        const STORAGE_BUCKET = 'question-papers';
+        
+        let supabaseClient;
+
+        function checkConfig() {
+            const result = document.getElementById('configResult');
+            result.innerHTML = '<h3>Configuration:</h3>';
+            result.innerHTML += `<div class="success">✅ URL: ${SUPABASE_URL}</div>`;
+            result.innerHTML += `<div class="success">✅ Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...</div>`;
+            result.innerHTML += `<div class="success">✅ Bucket Name: ${STORAGE_BUCKET}</div>`;
+            
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                result.innerHTML += `<div class="success">✅ Supabase client created successfully!</div>`;
+            } catch (error) {
+                result.innerHTML += `<div class="error">❌ Failed to create client: ${error.message}</div>`;
+            }
+        }
+
+        async function testConnection() {
+            const result = document.getElementById('connectionResult');
+            result.innerHTML = '<div class="warning">🔄 Testing connection...</div>';
+            
+            if (!supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+            
+            try {
+                const { data, error } = await supabaseClient.storage.listBuckets();
+                
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Connection Error:</div>`;
+                    result.innerHTML += `<div class="error">Message: ${error.message}</div>`;
+                    result.innerHTML += `<div class="error">Status: ${error.status || 'N/A'}</div>`;
+                    result.innerHTML += `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `<div class="success">✅ Connected successfully!</div>`;
+                    result.innerHTML += `<div class="success">API is responding correctly.</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Exception: ${error.message}</div>`;
+                result.innerHTML += `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        async function listBuckets() {
+            const result = document.getElementById('bucketsResult');
+            result.innerHTML = '<div class="warning">🔄 Fetching buckets...</div>';
+            
+            if (!supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+            
+            try {
+                const { data, error } = await supabaseClient.storage.listBuckets();
+                
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                    result.innerHTML += `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `<div class="success">✅ Found ${data.length} bucket(s):</div>`;
+                    
+                    if (data.length === 0) {
+                        result.innerHTML += `<div class="warning">⚠️ No buckets found. You need to create one!</div>`;
+                    } else {
+                        data.forEach(bucket => {
+                            const isTarget = bucket.name === STORAGE_BUCKET;
+                            const color = isTarget ? 'success' : 'info';
+                            result.innerHTML += `<div class="${color}">  ${isTarget ? '👉 ' : '   '}${bucket.name} (${bucket.public ? 'Public' : 'Private'})</div>`;
+                        });
+                        
+                        const hasTarget = data.some(b => b.name === STORAGE_BUCKET);
+                        if (hasTarget) {
+                            result.innerHTML += `<div class="success"><br>✅ Target bucket "${STORAGE_BUCKET}" exists!</div>`;
+                        } else {
+                            result.innerHTML += `<div class="warning"><br>⚠️ Target bucket "${STORAGE_BUCKET}" NOT found!</div>`;
+                        }
+                    }
+                    
+                    result.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Exception: ${error.message}</div>`;
+            }
+        }
+
+        async function createBucket() {
+            const result = document.getElementById('createResult');
+            result.innerHTML = '<div class="warning">🔄 Attempting to create bucket...</div>';
+            
+            if (!supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+            
+            try {
+                const { data, error } = await supabaseClient.storage.createBucket(STORAGE_BUCKET, {
+                    public: true,
+                    fileSizeLimit: 52428800 // 50MB
+                });
+                
+                if (error) {
+                    result.innerHTML = `<div class="error">❌ Failed to create bucket:</div>`;
+                    result.innerHTML += `<div class="error">Message: ${error.message}</div>`;
+                    result.innerHTML += `<div class="error">Hint: ${error.hint || 'N/A'}</div>`;
+                    
+                    if (error.message.includes('already exists')) {
+                        result.innerHTML += `<div class="warning"><br>⚠️ Bucket already exists! This is actually good news.</div>`;
+                        result.innerHTML += `<div class="success">The bucket exists but might need policies. See SQL below:</div>`;
+                        showPoliciesSQL(result);
+                    } else if (error.message.includes('permission') || error.message.includes('authorized')) {
+                        result.innerHTML += `<div class="warning"><br>⚠️ Permission denied. The ANON key cannot create buckets.</div>`;
+                        result.innerHTML += `<div class="success">✅ Solution: Create bucket manually in Supabase dashboard:</div>`;
+                        result.innerHTML += `<div>1. Go to: Storage → Buckets</div>`;
+                        result.innerHTML += `<div>2. Click "New Bucket"</div>`;
+                        result.innerHTML += `<div>3. Name: <strong>${STORAGE_BUCKET}</strong></div>`;
+                        result.innerHTML += `<div>4. Check "Public bucket"</div>`;
+                        result.innerHTML += `<div>5. Save</div>`;
+                        showPoliciesSQL(result);
+                    }
+                    
+                    result.innerHTML += `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `<div class="success">✅ Bucket created successfully!</div>`;
+                    result.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    result.innerHTML += `<div class="warning"><br>⚠️ Now you need to add policies!</div>`;
+                    showPoliciesSQL(result);
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Exception: ${error.message}</div>`;
+                result.innerHTML += `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        function showPoliciesSQL(container) {
+            const sql = `
+-- Run this in Supabase SQL Editor:
+
+CREATE POLICY "Public read access"
+ON storage.objects FOR SELECT
+USING (bucket_id = '${STORAGE_BUCKET}');
+
+CREATE POLICY "Allow uploads"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = '${STORAGE_BUCKET}');
+
+CREATE POLICY "Allow updates"
+ON storage.objects FOR UPDATE
+USING (bucket_id = '${STORAGE_BUCKET}');
+
+CREATE POLICY "Allow deletes"
+ON storage.objects FOR DELETE
+USING (bucket_id = '${STORAGE_BUCKET}');`;
+            
+            container.innerHTML += `<h3>📋 SQL to Add Policies:</h3><pre>${sql}</pre>`;
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            checkConfig();
+            setTimeout(testConnection, 500);
+            setTimeout(listBuckets, 1000);
+        };
+    </script>
+</body>
+</html>

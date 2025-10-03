@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Supabase Bucket</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .result {
+            background: #111;
+            padding: 20px;
+            margin: 10px 0;
+            border: 1px solid #0f0;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 16px;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Supabase Bucket Verification</h1>
+    
+    <button onclick="listAllBuckets()">1. List ALL Buckets</button>
+    <div id="bucketsResult" class="result"></div>
+
+    <button onclick="checkSpecificBucket()">2. Check 'question-papers' Bucket</button>
+    <div id="specificResult" class="result"></div>
+
+    <button onclick="testDirect()">3. Test Direct Storage Access</button>
+    <div id="directResult" class="result"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        async function listAllBuckets() {
+            const result = document.getElementById('bucketsResult');
+            result.innerHTML = '🔄 Loading all buckets...';
+            
+            try {
+                const { data, error } = await supabase.storage.listBuckets();
+                
+                if (error) {
+                    result.innerHTML = `❌ ERROR:\n${error.message}\n\nFull error:\n${JSON.stringify(error, null, 2)}`;
+                } else {
+                    result.innerHTML = `✅ Found ${data.length} bucket(s):\n\n<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    
+                    // Show bucket names clearly
+                    const names = data.map(b => `- ${b.name} (${b.public ? 'Public' : 'Private'})`).join('\n');
+                    result.innerHTML += `\n\nBucket Names:\n${names}`;
+                }
+            } catch (err) {
+                result.innerHTML = `❌ EXCEPTION: ${err.message}`;
+            }
+        }
+
+        async function checkSpecificBucket() {
+            const result = document.getElementById('specificResult');
+            result.innerHTML = '🔄 Checking question-papers bucket...';
+            
+            try {
+                const { data, error } = await supabase.storage.getBucket('question-papers');
+                
+                if (error) {
+                    result.innerHTML = `❌ ERROR: ${error.message}\n\n<pre>${JSON.stringify(error, null, 2)}</pre>`;
+                } else {
+                    result.innerHTML = `✅ Bucket found!\n\n<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (err) {
+                result.innerHTML = `❌ EXCEPTION: ${err.message}`;
+            }
+        }
+
+        async function testDirect() {
+            const result = document.getElementById('directResult');
+            result.innerHTML = '🔄 Testing direct storage access...';
+            
+            try {
+                // Test 1: List files
+                const { data: files, error: listError } = await supabase.storage
+                    .from('question-papers')
+                    .list();
+                
+                if (listError) {
+                    result.innerHTML = `❌ List Error: ${listError.message}\n\n<pre>${JSON.stringify(listError, null, 2)}</pre>`;
+                    return;
+                }
+                
+                result.innerHTML = `✅ Direct access works!\n\nFiles in bucket: ${files.length}\n\n<pre>${JSON.stringify(files, null, 2)}</pre>`;
+                
+            } catch (err) {
+                result.innerHTML = `❌ EXCEPTION: ${err.message}`;
+            }
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            listAllBuckets();
+        };
+    </script>
+</body>
+</html>

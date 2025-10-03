@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Storage Test - Complete</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            min-width: 160px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+        }
+        
+        .file-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+        
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Supabase Storage Test Suite</h1>
+        
+        <!-- Connection Test -->
+        <div class="test-section">
+            <h2>🔗 1. Connection Test</h2>
+            <div class="button-group">
+                <button onclick="testConnection()">Test Connection</button>
+                <button onclick="listBuckets()">List All Buckets</button>
+            </div>
+            <div id="connectionResult" class="result"></div>
+        </div>
+
+        <!-- Upload Test -->
+        <div class="test-section">
+            <h2>📤 2. Upload Test</h2>
+            <input type="file" id="uploadFile" accept="image/*" onchange="showFileInfo(this)">
+            <div id="fileInfo" class="file-info" style="display: none;"></div>
+            <div class="button-group">
+                <button onclick="uploadSingleFile()">Upload Single File</button>
+                <button onclick="uploadMultipleFiles()">Upload Multiple Files</button>
+            </div>
+            <div class="progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div id="uploadResult" class="result"></div>
+        </div>
+
+        <!-- Read/List Test -->
+        <div class="test-section">
+            <h2>📂 3. Read/List Test</h2>
+            <div class="button-group">
+                <button onclick="listAllFiles()">List All Files</button>
+                <button onclick="listPapersFolder()">List Papers Folder</button>
+                <button onclick="getFileDetails()">Get Latest File Details</button>
+            </div>
+            <div id="listResult" class="result"></div>
+        </div>
+
+        <!-- Download Test -->
+        <div class="test-section">
+            <h2>⬇️ 4. Download/URL Test</h2>
+            <div class="button-group">
+                <button onclick="getPublicUrls()">Get Public URLs</button>
+                <button onclick="downloadLatestFile()">Download Latest File</button>
+                <button onclick="showImagePreviews()">Show Image Previews</button>
+            </div>
+            <div id="downloadResult" class="result"></div>
+            <div id="imagePreview"></div>
+        </div>
+
+        <!-- Delete Test -->
+        <div class="test-section">
+            <h2>🗑️ 5. Delete Test</h2>
+            <div class="button-group">
+                <button onclick="deleteTestFiles()">Delete Test Files</button>
+                <button onclick="cleanupOldFiles()">Cleanup Old Files</button>
+            </div>
+            <div id="deleteResult" class="result"></div>
+        </div>
+
+        <!-- Stress Test -->
+        <div class="test-section">
+            <h2>⚡ 6. Stress Test</h2>
+            <div class="button-group">
+                <button onclick="stressTestUpload()">Stress Test (10 files)</button>
+                <button onclick="benchmarkUpload()">Benchmark Upload Speed</button>
+            </div>
+            <div id="stressResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        // Global variables
+        let uploadedFiles = [];
+        let testResults = {};
+
+        // Utility Functions
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            
+            element.className = `result ${colorClass}`;
+            element.textContent += `[${timestamp}] ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).textContent = '';
+        }
+
+        function updateProgress(percent) {
+            const progressBar = document.getElementById('progressBar');
+            const progress = document.getElementById('uploadProgress');
+            progress.style.display = 'block';
+            progressBar.style.width = percent + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('uploadProgress').style.display = 'none';
+        }
+
+        // 1. Connection Tests
+        async function testConnection() {
+            clearLog('connectionResult');
+            log('connectionResult', '🔄 Testing Supabase connection...', 'info');
+            
+            try {
+                // Test basic connection
+                const { data, error } = await supabase.storage.listBuckets();
+                
+                if (error) {
+                    log('connectionResult', `❌ Connection failed: ${error.message}`, 'error');
+                    return false;
+                }
+                
+                log('connectionResult', '✅ Connection successful!', 'success');
+                log('connectionResult', `📊 Found ${data.length} buckets`, 'success');
+                
+                // Test specific bucket
+                const targetBucket = data.find(b => b.name === STORAGE_BUCKET);
+                if (targetBucket) {
+                    log('connectionResult', `✅ Target bucket "${STORAGE_BUCKET}" found!`, 'success');
+                    log('connectionResult', `📋 Bucket info: ${JSON.stringify(targetBucket, null, 2)}`, 'info');
+                } else {
+                    log('connectionResult', `⚠️ Target bucket "${STORAGE_BUCKET}" not found!`, 'warning');
+                }
+                
+                return true;
+            } catch (error) {
+                log('connectionResult', `❌ Exception: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function listBuckets() {
+            clearLog('connectionResult');
+            log('connectionResult', '🔄 Listing all buckets...', 'info');
+            
+            try {
+                const { data, error } = await supabase.storage.listBuckets();
+                
+                if (error) {
+                    log('connectionResult', `❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+                
+                log('connectionResult', `✅ Found ${data.length} bucket(s):`, 'success');
+                data.forEach(bucket => {
+                    const isTarget = bucket.name === STORAGE_BUCKET;
+                    log('connectionResult', `${isTarget ? '👉' : '  '} ${bucket.name} (${bucket.public ? 'Public' : 'Private'})`, 'info');
+                });
+                
+                log('connectionResult', `\n📋 Full bucket data:\n${JSON.stringify(data, null, 2)}`, 'info');
+            } catch (error) {
+                log('connectionResult', `❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. Upload Tests
+        function showFileInfo(input) {
+            const fileInfo = document.getElementById('fileInfo');
+            const file = input.files[0];
+            
+            if (file) {
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>Selected File:</strong><br>
+                    Name: ${file.name}<br>
+                    Size: ${(file.size / 1024).toFixed(2)} KB<br>
+                    Type: ${file.type}<br>
+                    Last Modified: ${new Date(file.lastModified).toLocaleString()}
+                `;
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        }
+
+        async function uploadSingleFile() {
+            const fileInput = document.getElementById('uploadFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                log('uploadResult', '⚠️ Please select a file first!', 'warning');
+                return;
+            }
+            
+            clearLog('uploadResult');
+            log('uploadResult', `🔄 Starting upload: ${file.name}`, 'info');
+            updateProgress(0);
+            
+            try {
+                const fileName = `test/${Date.now()}_${file.name}`;
+                log('uploadResult', `📁 Upload path: ${fileName}`, 'info');
+                
+                updateProgress(25);
+                
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+                
+                updateProgress(75);
+                
+                if (error) {
+                    log('uploadResult', `❌ Upload failed: ${error.message}`, 'error');
+                    log('uploadResult', `💡 Error details: ${JSON.stringify(error, null, 2)}`, 'error');
+                    hideProgress();
+                    return;
+                }
+                
+                updateProgress(90);
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(fileName);
+                
+                updateProgress(100);
+                
+                log('uploadResult', `✅ Upload successful!`, 'success');
+                log('uploadResult', `📂 File path: ${data.path}`, 'success');
+                log('uploadResult', `🌐 Public URL: ${urlData.publicUrl}`, 'success');
+                
+                uploadedFiles.push({
+                    path: data.path,
+                    url: urlData.publicUrl,
+                    name: file.name,
+                    uploadTime: new Date().toISOString()
+                });
+                
+                setTimeout(hideProgress, 1000);
+                
+            } catch (error) {
+                log('uploadResult', `❌ Exception: ${error.message}`, 'error');
+                hideProgress();
+            }
+        }
+
+        async function uploadMultipleFiles() {
+            const fileInput = document.getElementById('uploadFile');
+            fileInput.multiple = true;
+            fileInput.click();
+            
+            fileInput.onchange = async () => {
+                const files = Array.from(fileInput.files);
+                
+                if (files.length === 0) {
+                    log('uploadResult', '⚠️ No files selected!', 'warning');
+                    return;
+                }
+                
+                clearLog('uploadResult');
+                log('uploadResult', `🔄 Starting batch upload: ${files.length} files`, 'info');
+                
+                const folderPath = `batch_${Date.now()}`;
+                let successCount = 0;
+                let failCount = 0;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileName = `${folderPath}/file_${i + 1}_${file.name}`;
+                    
+                    try {
+                        log('uploadResult', `📤 Uploading ${i + 1}/${files.length}: ${file.name}`, 'info');
+                        updateProgress((i / files.length) * 100);
+                        
+                        const { data, error } = await supabase.storage
+                            .from(STORAGE_BUCKET)
+                            .upload(fileName, file);
+                        
+                        if (error) {
+                            log('uploadResult', `❌ Failed: ${file.name} - ${error.message}`, 'error');
+                            failCount++;
+                        } else {
+                            log('uploadResult', `✅ Success: ${file.name}`, 'success');
+                            successCount++;
+                            
+                            uploadedFiles.push({
+                                path: data.path,
+                                name: file.name,
+                                uploadTime: new Date().toISOString()
+                            });
+                        }
+                    } catch (error) {
+                        log('uploadResult', `❌ Exception for ${file.name}: ${error.message}`, 'error');
+                        failCount++;
+                    }
+                }
+                
+                updateProgress(100);
+                log('uploadResult', `\n📊 Batch upload complete: ${successCount} success, ${failCount} failed`, 'info');
+                setTimeout(hideProgress, 1000);
+            };
+        }
+
+        // 3. Read/List Tests
+        async function listAllFiles() {
+            clearLog('listResult');
+            log('listResult', '🔄 Listing all files in bucket...', 'info');
+            
+            try {
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .list('', {
+                        limit: 100,
+                        offset: 0,
+                        sortBy: { column: 'name', order: 'desc' }
+                    });
+                
+                if (error) {
+                    log('listResult', `❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+                
+                log('listResult', `✅ Found ${data.length} items:`, 'success');
+                
+                data.forEach((item, index) => {
+                    const type = item.metadata ? '📄' : '📁';
+                    const size = item.metadata ? ` (${(item.metadata.size / 1024).toFixed(2)} KB)` : '';
+                    log('listResult', `${type} ${item.name}${size}`, 'info');
+                });
+                
+                log('listResult', `\n📋 Raw data:\n${JSON.stringify(data, null, 2)}`, 'info');
+                
+            } catch (error) {
+                log('listResult', `❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function listPapersFolder() {
+            clearLog('listResult');
+            log('listResult', '🔄 Listing papers folder...', 'info');
+            
+            try {
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .list('papers', {
+                        limit: 50
+                    });
+                
+                if (error) {
+                    log('listResult', `❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+                
+                log('listResult', `✅ Found ${data.length} papers:`, 'success');
+                
+                data.forEach(paper => {
+                    log('listResult', `📁 ${paper.name}`, 'info');
+                });
+                
+            } catch (error) {
+                log('listResult', `❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function getFileDetails() {
+            if (uploadedFiles.length === 0) {
+                log('listResult', '⚠️ No uploaded files to check. Upload a file first.', 'warning');
+                return;
+            }
+            
+            clearLog('listResult');
+            const latestFile = uploadedFiles[uploadedFiles.length - 1];
+            log('listResult', `🔄 Getting details for: ${latestFile.path}`, 'info');
+            
+            try {
+                // Extract folder and filename from path
+                const pathParts = latestFile.path.split('/');
+                const folder = pathParts.slice(0, -1).join('/');
+                const filename = pathParts[pathParts.length - 1];
+                
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .list(folder);
+                
+                if (error) {
+                    log('listResult', `❌ Error: ${error.message}`, 'error');
+                    return;
+                }
+                
+                const fileInfo = data.find(f => f.name === filename);
+                
+                if (fileInfo) {
+                    log('listResult', `✅ File details:`, 'success');
+                    log('listResult', `📄 Name: ${fileInfo.name}`, 'info');
+                    log('listResult', `📊 Size: ${(fileInfo.metadata.size / 1024).toFixed(2)} KB`, 'info');
+                    log('listResult', `📅 Created: ${new Date(fileInfo.created_at).toLocaleString()}`, 'info');
+                    log('listResult', `🔄 Updated: ${new Date(fileInfo.updated_at).toLocaleString()}`, 'info');
+                    log('listResult', `\n📋 Full metadata:\n${JSON.stringify(fileInfo, null, 2)}`, 'info');
+                } else {
+                    log('listResult', `⚠️ File not found in listing`, 'warning');
+                }
+                
+            } catch (error) {
+                log('listResult', `❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        // 4. Download/URL Tests
+        async function getPublicUrls() {
+            clearLog('downloadResult');
+            
+            if (uploadedFiles.length === 0) {
+                log('downloadResult', '⚠️ No uploaded files. Upload files first.', 'warning');
+                return;
+            }
+            
+            log('downloadResult', '🔄 Getting public URLs for uploaded files...', 'info');
+            
+            uploadedFiles.forEach((file, index) => {
+                const { data } = supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(file.path);
+                
+                log('downloadResult', `🌐 ${index + 1}. ${file.name}:`, 'success');
+                log('downloadResult', `   ${data.publicUrl}`, 'info');
+            });
+        }
+
+        async function downloadLatestFile() {
+            if (uploadedFiles.length === 0) {
+                log('downloadResult', '⚠️ No uploaded files. Upload files first.', 'warning');
+                return;
+            }
+            
+            clearLog('downloadResult');
+            const latestFile = uploadedFiles[uploadedFiles.length - 1];
+            log('downloadResult', `🔄 Downloading: ${latestFile.name}`, 'info');
+            
+            try {
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .download(latestFile.path);
+                
+                if (error) {
+                    log('downloadResult', `❌ Download failed: ${error.message}`, 'error');
+                    return;
+                }
+                
+                log('downloadResult', `✅ Download successful!`, 'success');
+                log('downloadResult', `📊 Size: ${(data.size / 1024).toFixed(2)} KB`, 'info');
+                log('downloadResult', `🗂️ Type: ${data.type}`, 'info');
+                
+                // Create download link
+                const url = URL.createObjectURL(data);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = latestFile.name;
+                link.textContent = `Download ${latestFile.name}`;
+                link.style.color = '#667eea';
+                link.style.textDecoration = 'underline';
+                
+                const downloadDiv = document.getElementById('downloadResult');
+                downloadDiv.appendChild(document.createElement('br'));
+                downloadDiv.appendChild(link);
+                
+            } catch (error) {
+                log('downloadResult', `❌ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        async function showImagePreviews() {
+            const previewDiv = document.getElementById('imagePreview');
+            previewDiv.innerHTML = '';
+            
+            if (uploadedFiles.length === 0) {
+                log('downloadResult', '⚠️ No uploaded files. Upload images first.', 'warning');
+                return;
+            }
+            
+            clearLog('downloadResult');
+            log('downloadResult', '🔄 Loading image previews...', 'info');
+            
+            let imageCount = 0;
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const { data } = supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .getPublicUrl(file.path);
+                    
+                    const img = document.createElement('img');
+                    img.src = data.publicUrl;
+                    img.className = 'image-preview';
+                    img.alt = file.name;
+                    img.title = file.name;
+                    
+                    img.onload = () => {
+                        imageCount++;
+                        log('downloadResult', `✅ Loaded: ${file.name}`, 'success');
+                    };
+                    
+                    img.onerror = () => {
+                        log('downloadResult', `❌ Failed to load: ${file.name}`, 'error');
+                    };
+                    
+                    previewDiv.appendChild(img);
+                    
+                } catch (error) {
+                    log('downloadResult', `❌ Error with ${file.name}: ${error.message}`, 'error');
+                }
+            }
+            
+            log('downloadResult', `📸 Loading ${uploadedFiles.length} image previews...`, 'info');
+        }
+
+        // 5. Delete Tests
+        async function deleteTestFiles() {
+            if (uploadedFiles.length === 0) {
+                log('deleteResult', '⚠️ No uploaded files to delete.', 'warning');
+                return;
+            }
+            
+            clearLog('deleteResult');
+            log('deleteResult', `🔄 Deleting ${uploadedFiles.length} test files...`, 'info');
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const file of uploadedFiles) {
+                try {
+                    const { error } = await supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .remove([file.path]);
+                    
+                    if (error) {
+                        log('deleteResult', `❌ Failed to delete ${file.name}: ${error.message}`, 'error');
+                        failCount++;
+                    } else {
+                        log('deleteResult', `✅ Deleted: ${file.name}`, 'success');
+                        successCount++;
+                    }
+                } catch (error) {
+                    log('deleteResult', `❌ Exception deleting ${file.name}: ${error.message}`, 'error');
+                    failCount++;
+                }
+            }
+            
+            log('deleteResult', `\n📊 Deletion complete: ${successCount} success, ${failCount} failed`, 'info');
+            
+            if (successCount > 0) {
+                uploadedFiles = uploadedFiles.filter((_, index) => index >= successCount);
+            }
+        }
+
+        async function cleanupOldFiles() {
+            clearLog('deleteResult');
+            log('deleteResult', '🔄 Cleaning up old test files...', 'info');
+            
+            try {
+                // List files in test folder
+                const { data, error } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .list('test');
+                
+                if (error) {
+                    log('deleteResult', `❌ Error listing files: ${error.message}`, 'error');
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    log('deleteResult', '✅ No test files to cleanup.', 'success');
+                    return;
+                }
+                
+                const filesToDelete = data.map(file => `test/${file.name}`);
+                
+                const { error: deleteError } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .remove(filesToDelete);
+                
+                if (deleteError) {
+                    log('deleteResult', `❌ Cleanup failed: ${deleteError.message}`, 'error');
+                } else {
+                    log('deleteResult', `✅ Cleaned up ${data.length} test files.`, 'success');
+                }
+                
+            } catch (error) {
+                log('deleteResult', `❌ Cleanup exception: ${error.message}`, 'error');
+            }
+        }
+
+        // 6. Stress Tests
+        async function stressTestUpload() {
+            clearLog('stressResult');
+            log('stressResult', '🔄 Starting stress test: uploading 10 test files...', 'info');
+            
+            const startTime = Date.now();
+            let successCount = 0;
+            let failCount = 0;
+            
+            // Create test files
+            const testFiles = [];
+            for (let i = 0; i < 10; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                
+                // Generate random colors
+                ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                ctx.fillRect(0, 0, 200, 200);
+                ctx.fillStyle = 'white';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Test ${i + 1}`, 100, 100);
+                
+                canvas.toBlob(blob => {
+                    testFiles.push(new File([blob], `stress_test_${i + 1}.png`, { type: 'image/png' }));
+                });
+            }
+            
+            // Wait for all blobs to be created
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const folderPath = `stress_test_${Date.now()}`;
+            
+            for (let i = 0; i < testFiles.length; i++) {
+                const file = testFiles[i];
+                const fileName = `${folderPath}/${file.name}`;
+                
+                try {
+                    log('stressResult', `📤 Uploading ${i + 1}/10: ${file.name}`, 'info');
+                    updateProgress((i / testFiles.length) * 100);
+                    
+                    const { data, error } = await supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .upload(fileName, file);
+                    
+                    if (error) {
+                        log('stressResult', `❌ Failed: ${error.message}`, 'error');
+                        failCount++;
+                    } else {
+                        successCount++;
+                    }
+                } catch (error) {
+                    log('stressResult', `❌ Exception: ${error.message}`, 'error');
+                    failCount++;
+                }
+            }
+            
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+            
+            updateProgress(100);
+            log('stressResult', `\n📊 Stress test complete:`, 'success');
+            log('stressResult', `✅ Successful uploads: ${successCount}`, 'success');
+            log('stressResult', `❌ Failed uploads: ${failCount}`, 'error');
+            log('stressResult', `⏱️ Total time: ${duration}ms`, 'info');
+            log('stressResult', `⚡ Average time per file: ${(duration / testFiles.length).toFixed(2)}ms`, 'info');
+            
+            setTimeout(hideProgress, 1000);
+        }
+
+        async function benchmarkUpload() {
+            const fileInput = document.getElementById('uploadFile');
+            if (!fileInput.files[0]) {
+                log('stressResult', '⚠️ Please select a file first for benchmarking.', 'warning');
+                return;
+            }
+            
+            clearLog('stressResult');
+            const file = fileInput.files[0];
+            log('stressResult', `🔄 Benchmarking upload speed for: ${file.name}`, 'info');
+            
+            const iterations = 5;
+            const times = [];
+            
+            for (let i = 0; i < iterations; i++) {
+                const fileName = `benchmark/${Date.now()}_${i}_${file.name}`;
+                
+                try {
+                    log('stressResult', `📊 Benchmark ${i + 1}/${iterations}...`, 'info');
+                    updateProgress((i / iterations) * 100);
+                    
+                    const startTime = performance.now();
+                    
+                    const { error } = await supabase.storage
+                        .from(STORAGE_BUCKET)
+                        .upload(fileName, file);
+                    
+                    const endTime = performance.now();
+                    const uploadTime = endTime - startTime;
+                    times.push(uploadTime);
+                    
+                    if (error) {
+                        log('stressResult', `❌ Upload ${i + 1} failed: ${error.message}`, 'error');
+                    } else {
+                        log('stressResult', `✅ Upload ${i + 1}: ${uploadTime.toFixed(2)}ms`, 'success');
+                    }
+                    
+                } catch (error) {
+                    log('stressResult', `❌ Exception in upload ${i + 1}: ${error.message}`, 'error');
+                }
+            }
+            
+            if (times.length > 0) {
+                const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+                const minTime = Math.min(...times);
+                const maxTime = Math.max(...times);
+                
+                updateProgress(100);
+                log('stressResult', `\n📊 Benchmark Results:`, 'success');
+                log('stressResult', `📈 Average time: ${avgTime.toFixed(2)}ms`, 'info');
+                log('stressResult', `⚡ Fastest: ${minTime.toFixed(2)}ms`, 'success');
+                log('stressResult', `🐌 Slowest: ${maxTime.toFixed(2)}ms`, 'warning');
+                log('stressResult', `📊 Upload speed: ${((file.size / 1024) / (avgTime / 1000)).toFixed(2)} KB/s`, 'info');
+            }
+            
+            setTimeout(hideProgress, 1000);
+        }
+
+        // Auto-run connection test on page load
+        window.onload = () => {
+            testConnection();
+        };
+    </script>
+</body>
+</html>
