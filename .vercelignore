@@ -2,7 +2,6 @@
 
 # Development files
 *.backup
-*.old
 *.corrupted
 
 # Test files
@@ -12,6 +11,7 @@ diagnose.html
 verify-*.html
 init-storage.html
 server-setup.html
+quick-db-check.html
 
 # Documentation (keep migration guide)
 ADMIN_CONFIG.md
@@ -23,10 +23,10 @@ OPTIMIZATION_SUMMARY.md
 SUPABASE-SETUP.md
 VERCEL_DEPLOYMENT.md
 BUGFIX-ID-CONVERSION.md
+VERCEL_FIX_SUMMARY.md
 
 # Git
 .git/
-.github/
 .github/
 
 # Node modules (if any)
@@ -38,3 +38,10 @@ node_modules/
 # Editor files
 .vscode/
 .idea/
+
+# Keep important files - DO NOT EXCLUDE
+!css/**
+!js/**
+!*.html
+!vercel.json
+!_headers

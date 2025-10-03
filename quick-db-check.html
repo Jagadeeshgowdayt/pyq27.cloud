@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Database Check</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 20px;
+        }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .warning { color: #ff0; }
+        .info { color: #0af; }
+        pre { background: #000; padding: 10px; margin: 10px 0; }
+        button { 
+            background: #0f0; 
+            color: #000; 
+            border: none; 
+            padding: 10px 20px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Quick Database Check</h1>
+    <div id="output"></div>
+    <button onclick="checkDatabase()">Check Database Now</button>
+    <button onclick="checkLocalStorage()">Check LocalStorage</button>
+    <button onclick="location.reload()">Refresh</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            output.appendChild(div);
+        }
+        
+        async function checkDatabase() {
+            output.innerHTML = '';
+            log('🚀 Starting database check...', 'info');
+            
+            try {
+                // Check if Supabase is loaded
+                if (typeof supabase === 'undefined') {
+                    log('❌ ERROR: Supabase client not loaded!', 'error');
+                    return;
+                }
+                log('✅ Supabase client loaded', 'success');
+                
+                // Check configuration
+                log(`📍 Supabase URL: ${SUPABASE_URL}`, 'info');
+                log(`🔑 API Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...`, 'info');
+                
+                // Test connection with storage
+                log('📦 Testing storage connection...', 'info');
+                const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+                
+                if (bucketError) {
+                    log(`❌ Storage error: ${bucketError.message}`, 'error');
+                } else {
+                    log(`✅ Storage connected. Buckets: ${buckets.map(b => b.name).join(', ')}`, 'success');
+                }
+                
+                // Test database table
+                log('🗄️ Testing database table: question_papers', 'info');
+                const { data: papers, error: dbError } = await supabase
+                    .from('question_papers')
+                    .select('*')
+                    .order('upload_date', { ascending: false });
+                
+                if (dbError) {
+                    log(`❌ DATABASE ERROR: ${dbError.message}`, 'error');
+                    log(`Details: ${JSON.stringify(dbError, null, 2)}`, 'error');
+                    
+                    if (dbError.message.includes('relation') && dbError.message.includes('does not exist')) {
+                        log('', 'error');
+                        log('🚨 TABLE DOES NOT EXIST!', 'error');
+                        log('', 'error');
+                        log('FIX: You need to create the table in Supabase Dashboard', 'warning');
+                        log('1. Go to https://supabase.com/dashboard', 'warning');
+                        log('2. Click SQL Editor', 'warning');
+                        log('3. Run the SQL from supabase-database-setup.sql', 'warning');
+                    }
+                } else {
+                    log(`✅ Database query successful!`, 'success');
+                    log(`📊 Papers found: ${papers ? papers.length : 0}`, papers && papers.length > 0 ? 'success' : 'warning');
+                    
+                    if (papers && papers.length > 0) {
+                        const pre = document.createElement('pre');
+                        pre.className = 'success';
+                        pre.textContent = JSON.stringify(papers.map(p => ({
+                            id: p.id,
+                            subject: p.subject,
+                            pages: p.total_pages,
+                            date: p.upload_date
+                        })), null, 2);
+                        output.appendChild(pre);
+                    } else {
+                        log('', 'warning');
+                        log('⚠️ DATABASE IS EMPTY!', 'warning');
+                        log('', 'warning');
+                        log('FIX: You need to migrate your papers', 'warning');
+                        log('1. Open migrate-to-database.html', 'warning');
+                        log('2. Click "Start Migration"', 'warning');
+                        log('3. Your 2 papers will be uploaded to database', 'warning');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ UNEXPECTED ERROR: ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+        
+        function checkLocalStorage() {
+            output.innerHTML = '';
+            log('💾 Checking localStorage...', 'info');
+            
+            const papers = localStorage.getItem('questionPapers');
+            if (papers) {
+                const parsed = JSON.parse(papers);
+                log(`✅ Found ${parsed.length} papers in localStorage`, 'success');
+                
+                const pre = document.createElement('pre');
+                pre.className = 'info';
+                pre.textContent = JSON.stringify(parsed.map(p => ({
+                    id: p.id,
+                    subject: p.subject,
+                    pages: p.totalPages || p.total_pages
+                })), null, 2);
+                output.appendChild(pre);
+            } else {
+                log('⚠️ No papers in localStorage', 'warning');
+            }
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(checkDatabase, 500);
+        });
+    </script>
+</body>
+</html>
