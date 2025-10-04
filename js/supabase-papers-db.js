@@ -11,7 +11,8 @@ class SupabasePapersDB {
             // Convert ID to integer (remove decimal part if present)
             const paperId = Math.floor(Number(paperData.id));
             
-            const { data, error } = await supabase
+            const client = window.supabase_client || window.supabase || supabase;
+            const { data, error } = await client
                 .from(this.tableName)
                 .insert([{
                     id: paperId,
@@ -43,12 +44,13 @@ class SupabasePapersDB {
         try {
             console.log('🔍 Querying database table:', this.tableName);
             
-            // Check if supabase is defined
-            if (typeof supabase === 'undefined') {
+            // Check if supabase is defined (try multiple references)
+            const client = window.supabase_client || window.supabase || supabase;
+            if (!client) {
                 throw new Error('Supabase client is not initialized');
             }
             
-            const { data, error } = await supabase
+            const { data, error } = await client
                 .from(this.tableName)
                 .select('*')
                 .order('upload_date', { ascending: false });
@@ -259,32 +261,34 @@ class SupabasePapersDB {
 let supabasePapersDB;
 
 function initSupabasePapersDB() {
-    // First ensure supabase client is initialized
-    if (typeof supabase === 'undefined' || !supabase) {
-        console.warn('⚠️ Supabase client not ready, trying to initialize...');
-        if (typeof initSupabaseClient === 'function') {
-            initSupabaseClient();
-        }
-    }
+    // Check for supabase client (try multiple references)
+    const client = window.supabase_client || window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
     
-    if (typeof supabase === 'undefined' || !supabase) {
+    if (!client) {
         console.error('❌ Cannot initialize SupabasePapersDB: supabase client not loaded');
         return null;
     }
     
-    if (!supabasePapersDB) {
-        supabasePapersDB = new SupabasePapersDB();
+    if (!window.supabasePapersDB) {
+        window.supabasePapersDB = new SupabasePapersDB();
         console.log('✅ SupabasePapersDB initialized');
     }
     
-    return supabasePapersDB;
+    return window.supabasePapersDB;
 }
 
-// Try to initialize immediately if supabase is already loaded
-if (typeof supabase !== 'undefined' && supabase) {
-    supabasePapersDB = new SupabasePapersDB();
-    console.log('✅ SupabasePapersDB initialized on load');
-} else {
-    console.warn('⚠️ Supabase not ready yet, SupabasePapersDB will initialize later');
+// Wait for the inline Supabase to initialize
+function waitForSupabaseAndInit() {
+    const client = window.supabase_client || window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+    
+    if (client) {
+        window.supabasePapersDB = new SupabasePapersDB();
+        console.log('✅ SupabasePapersDB initialized automatically');
+    } else {
+        setTimeout(waitForSupabaseAndInit, 100); // Check every 100ms
+    }
 }
+
+// Start waiting for Supabase
+waitForSupabaseAndInit();
 

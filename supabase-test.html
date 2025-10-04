@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Loading Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .log {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+        }
+        .error { color: #ff0000; border-left-color: #ff0000; }
+        .success { color: #00ff00; border-left-color: #00ff00; }
+        .info { color: #ffff00; border-left-color: #ffff00; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Loading Test</h1>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        // Test 1: Check if Supabase library loads
+        log('=== TEST 1: Checking Supabase Library ===', 'info');
+        log(`window.supabase exists: ${typeof window.supabase !== 'undefined'}`, 'info');
+        log(`window.supabase type: ${typeof window.supabase}`, 'info');
+        
+        if (typeof window.supabase !== 'undefined') {
+            log(`window.supabase.createClient exists: ${typeof window.supabase.createClient === 'function'}`, 'success');
+        }
+
+        // Test 2: Try to load scripts manually
+        log('\n=== TEST 2: Loading Scripts Manually ===', 'info');
+        
+        function loadScript(src, name) {
+            return new Promise((resolve, reject) => {
+                log(`Loading ${name}...`, 'info');
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    log(`✅ ${name} loaded successfully`, 'success');
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    log(`❌ ${name} failed to load: ${error}`, 'error');
+                    reject(error);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        async function testScriptLoading() {
+            try {
+                // Load Supabase first
+                if (typeof window.supabase === 'undefined') {
+                    await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', 'Supabase Library');
+                }
+                
+                // Check if it's now available
+                log(`After loading: window.supabase exists: ${typeof window.supabase !== 'undefined'}`, 'info');
+                
+                if (typeof window.supabase !== 'undefined') {
+                    log('✅ Supabase library is available!', 'success');
+                    
+                    // Test creating client
+                    try {
+                        const SUPABASE_URL = 'https://qnxhmmubhfzmvfvmzbud.supabase.co';
+                        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFueGhtbXViaGZ6bXZmdm16YnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzUwNTIsImV4cCI6MjA3NTAxMTA1Mn0.LI7QKM0adkdMVgH9-JoY9YrHtAIXMen8GnqmDKKbfDo';
+                        
+                        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        log('✅ Supabase client created successfully!', 'success');
+                        
+                        // Test database query
+                        log('Testing database connection...', 'info');
+                        const { data, error } = await supabase
+                            .from('question_papers')
+                            .select('*')
+                            .limit(5);
+                        
+                        if (error) {
+                            log(`❌ Database error: ${error.message}`, 'error');
+                        } else {
+                            log(`✅ Database connected! Found ${data.length} papers`, 'success');
+                            data.forEach((paper, index) => {
+                                log(`  Paper ${index + 1}: ID=${paper.id}, Subject=${paper.subject}`, 'info');
+                            });
+                        }
+                        
+                    } catch (error) {
+                        log(`❌ Error creating Supabase client: ${error.message}`, 'error');
+                    }
+                } else {
+                    log('❌ Supabase library still not available!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Script loading error: ${error.message}`, 'error');
+            }
+        }
+
+        // Wait a moment then test
+        setTimeout(testScriptLoading, 100);
+    </script>
+</body>
+</html>

@@ -38,7 +38,7 @@ class QuestionPaperManager {
             let retries = 0;
             const maxRetries = 10;
             
-            while ((typeof supabasePapersDB === 'undefined' || !supabasePapersDB) && retries < maxRetries) {
+            while ((typeof window.supabasePapersDB === 'undefined' || !window.supabasePapersDB) && retries < maxRetries) {
                 console.warn(`⚠️ Supabase DB not loaded yet, waiting... (${retries + 1}/${maxRetries})`);
                 
                 // Try to initialize if function exists
@@ -50,12 +50,12 @@ class QuestionPaperManager {
                 retries++;
             }
             
-            if (typeof supabasePapersDB === 'undefined' || !supabasePapersDB) {
+            if (typeof window.supabasePapersDB === 'undefined' || !window.supabasePapersDB) {
                 throw new Error('SupabasePapersDB failed to load after 3 seconds');
             }
             
             console.log('✅ Supabase DB helper loaded, fetching papers...');
-            this.papers = await supabasePapersDB.getAllPapers();
+            this.papers = await window.supabasePapersDB.getAllPapers();
             console.log(`✅ Loaded ${this.papers.length} papers from database`);
             
             // Also sync to localStorage for offline access

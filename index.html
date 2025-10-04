@@ -22,7 +22,42 @@
     
     <!-- Supabase Client - Load synchronously to ensure it's available -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase-config.js"></script>
+    
+    <script>
+        // Inline Supabase initialization to ensure it loads
+        console.log('🔧 Initializing Supabase inline...');
+        
+        // Wait for Supabase library to be available
+        function waitForSupabase() {
+            return new Promise((resolve) => {
+                if (typeof window.supabase !== 'undefined') {
+                    console.log('✅ Supabase library found');
+                    resolve();
+                } else {
+                    console.log('⏳ Waiting for Supabase library...');
+                    setTimeout(() => waitForSupabase().then(resolve), 50);
+                }
+            });
+        }
+        
+        waitForSupabase().then(() => {
+            // Supabase Configuration
+            const SUPABASE_URL = 'https://qnxhmmubhfzmvfvmzbud.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFueGhtbXViaGZ6bXZmdm16YnVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzUwNTIsImV4cCI6MjA3NTAxMTA1Mn0.LI7QKM0adkdMVgH9-JoY9YrHtAIXMen8GnqmDKKbfDo';
+
+            // Create Supabase client
+            try {
+                window.supabase_client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log('✅ Supabase client initialized inline');
+                
+                // Create global supabase reference for compatibility
+                window.supabase = window.supabase_client;
+            } catch (error) {
+                console.error('❌ Error creating Supabase client inline:', error);
+            }
+        });
+    </script>
+    
     <script src="js/supabase-storage.js"></script>
     <script src="js/supabase-papers-db.js"></script>
 </head>
