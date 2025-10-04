@@ -694,8 +694,9 @@ class QuestionPaperManager {
     shareOnWhatsApp() {
         if (!this.currentViewing) return;
         
-        const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${this.currentViewing.id}`;
-        const message = `Check out this question paper: ${this.currentViewing.subject}\n\n${shareUrl}`;
+        // Use clean URL without pathname to ensure it works on Vercel
+        const shareUrl = `${window.location.origin}/?paperId=${this.currentViewing.id}`;
+        const message = `📚 *${this.currentViewing.subject}* - Previous Year Question Paper\n\n🔗 Open directly: ${shareUrl}\n\n✅ 100% FREE | No Login Required`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
@@ -705,8 +706,9 @@ class QuestionPaperManager {
         const paper = this.papers.find(p => p.id === paperId);
         if (!paper) return;
         
-        const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${paperId}`;
-        const message = `Check out this question paper: ${paper.subject}\n\n${shareUrl}`;
+        // Use clean URL without pathname to ensure it works on Vercel
+        const shareUrl = `${window.location.origin}/?paperId=${paperId}`;
+        const message = `📚 *${paper.subject}* - Previous Year Question Paper\n\n🔗 Open directly: ${shareUrl}\n\n✅ 100% FREE | No Login Required`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
