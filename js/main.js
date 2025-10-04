@@ -734,29 +734,33 @@ class QuestionPaperManager {
         if (paperId) {
             console.log('📄 Opening paper from URL:', paperId);
             
-            // Check if papers are loaded
-            if (this.papers.length === 0) {
-                console.warn('⚠️ No papers loaded yet, waiting...');
-                
-                // Retry after a short delay
-                setTimeout(() => {
-                    if (this.papers.length > 0) {
-                        this.openPaper(paperId);
-                    } else {
-                        console.error('❌ No papers available');
-                        this.showNotification('No papers available. Please try again later.', 'error');
-                        
-                        // Clean URL and redirect to homepage
-                        const url = new URL(window.location);
-                        url.searchParams.delete('paperId');
-                        window.history.replaceState({}, '', url);
-                    }
-                }, 1000);
-                return;
-            }
+            // Improved retry logic with multiple attempts
+            let attempts = 0;
+            const maxAttempts = 20; // 20 attempts × 500ms = 10 seconds max wait
             
-            // Papers are loaded, try to open
-            this.openPaper(paperId);
+            const tryOpenPaper = () => {
+                attempts++;
+                console.log(`🔄 Attempt ${attempts}/${maxAttempts} - Papers loaded: ${this.papers.length}`);
+                
+                if (this.papers.length > 0) {
+                    console.log(`✅ Papers loaded (${this.papers.length} papers), opening paper ${paperId}`);
+                    this.openPaper(paperId);
+                } else if (attempts < maxAttempts) {
+                    console.log(`⏳ Waiting for papers... (attempt ${attempts}/${maxAttempts})`);
+                    setTimeout(tryOpenPaper, 500);
+                } else {
+                    console.error(`❌ No papers loaded after ${maxAttempts} attempts (${maxAttempts * 500}ms)`);
+                    this.showNotification('No papers available. Please try again later.', 'error');
+                    
+                    // Clean URL and redirect to homepage
+                    const url = new URL(window.location);
+                    url.searchParams.delete('paperId');
+                    window.history.replaceState({}, '', url);
+                }
+            };
+            
+            // Start the retry loop immediately
+            tryOpenPaper();
         }
     }
     
