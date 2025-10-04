@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSS Loading Test</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/protection.css">
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🧪 CSS Loading Test</h1>
+    
+    <div class="test success">
+        ✅ This green box means inline CSS works
+    </div>
+    
+    <div class="test" id="cssTest">
+        Testing external CSS... (should be styled if CSS loads)
+    </div>
+
+    <script>
+        // Test if CSS loaded by checking computed styles
+        function testCSSLoading() {
+            console.log('🔍 Testing CSS loading...');
+            
+            // Check if stylesheets loaded
+            const stylesheets = document.styleSheets;
+            console.log(`📋 Found ${stylesheets.length} stylesheets:`);
+            
+            for (let i = 0; i < stylesheets.length; i++) {
+                const sheet = stylesheets[i];
+                try {
+                    console.log(`  ${i + 1}. ${sheet.href || 'inline'} - Rules: ${sheet.cssRules ? sheet.cssRules.length : 'blocked'}`);
+                } catch (e) {
+                    console.log(`  ${i + 1}. ${sheet.href || 'inline'} - Error: ${e.message}`);
+                }
+            }
+            
+            // Test specific CSS elements
+            const testDiv = document.getElementById('cssTest');
+            const computedStyle = window.getComputedStyle(testDiv);
+            
+            console.log('🎨 Computed styles:');
+            console.log(`  Background: ${computedStyle.backgroundColor}`);
+            console.log(`  Color: ${computedStyle.color}`);
+            console.log(`  Font: ${computedStyle.fontFamily}`);
+            
+            // Check for specific classes that should be defined in styles.css
+            const body = document.body;
+            const bodyStyle = window.getComputedStyle(body);
+            console.log(`  Body background: ${bodyStyle.backgroundColor}`);
+            
+            // Test loading individual CSS files
+            testCSSFile('css/styles.css');
+            testCSSFile('css/protection.css');
+        }
+        
+        function testCSSFile(url) {
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ ${url} - Status: ${response.status} ${response.statusText}`);
+                        return response.text();
+                    } else {
+                        console.error(`❌ ${url} - Status: ${response.status} ${response.statusText}`);
+                    }
+                })
+                .then(css => {
+                    if (css) {
+                        console.log(`📝 ${url} - Size: ${css.length} bytes`);
+                        console.log(`📝 ${url} - First 100 chars: ${css.substring(0, 100)}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`❌ ${url} - Fetch error:`, error);
+                });
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', testCSSLoading);
+    </script>
+</body>
+</html>
