@@ -672,9 +672,16 @@ class QuestionPaperManager {
     }
 
     openPaper(paperId) {
-        const paper = this.papers.find(p => p.id === paperId);
-        if (!paper) return;
+        // Ensure proper ID comparison by converting both to numbers
+        const paper = this.papers.find(p => Number(p.id) === Number(paperId));
+        
+        if (!paper) {
+            console.error('❌ Paper not found with ID:', paperId);
+            console.log('Available IDs:', this.papers.map(p => p.id));
+            return;
+        }
 
+        console.log('📖 Opening paper:', paper.subject);
         this.currentViewing = paper;
         this.currentPageIndex = 0;
         this.zoomLevel = 1;
@@ -719,10 +726,34 @@ class QuestionPaperManager {
         const paperId = urlParams.get('paperId');
         
         if (paperId) {
-            // Small delay to ensure papers are loaded
-            setTimeout(() => {
-                this.openPaper(parseInt(paperId));
-            }, 100);
+            console.log('🔗 Shared link detected! Paper ID from URL:', paperId);
+            
+            // Wait for papers to be fully loaded
+            const tryOpenPaper = () => {
+                if (this.papers.length === 0) {
+                    console.log('⏳ Papers not loaded yet, retrying...');
+                    setTimeout(tryOpenPaper, 200);
+                    return;
+                }
+                
+                console.log('📚 Papers loaded, searching for paper...');
+                console.log('Available paper IDs:', this.papers.map(p => p.id));
+                
+                // Convert paperId to number and find the paper
+                const paperIdNum = Number(paperId);
+                const paper = this.papers.find(p => Number(p.id) === paperIdNum);
+                
+                if (paper) {
+                    console.log('✅ Found paper:', paper.subject);
+                    this.openPaper(paper.id);
+                } else {
+                    console.error('❌ Paper not found with ID:', paperId);
+                    console.log('Available papers:', this.papers.map(p => ({ id: p.id, subject: p.subject })));
+                }
+            };
+            
+            // Start trying after a short delay
+            setTimeout(tryOpenPaper, 300);
         }
     }
 
