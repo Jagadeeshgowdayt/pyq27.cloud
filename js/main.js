@@ -16,34 +16,14 @@ class QuestionPaperManager {
         this.setupEventListeners();
         this.setupProtection();
         
-        // Check URL FIRST to capture the intent
-        const urlPaperId = this.getUrlPaperId();
-        
         // Load papers from Supabase database
         await this.loadPapersFromDB();
         
         this.renderPapers();
         this.populateFilters();
         
-        // NOW open the paper if URL had paperId
-        if (urlPaperId) {
-            this.openPaperFromUrl(urlPaperId);
-        }
-    }
-    
-    // Extract paper ID from URL (called before loading papers)
-    getUrlPaperId() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const paperId = urlParams.get('paperId');
-        
-        if (paperId) {
-            console.log('🔗 SHARED LINK DETECTED!');
-            console.log('📋 Paper ID from URL:', paperId);
-            console.log('📋 Paper ID type:', typeof paperId);
-            return paperId;
-        }
-        
-        return null;
+        // Check URL AFTER papers are loaded
+        this.checkUrlForPaper();
     }
     
     // Load papers from Supabase database
@@ -694,30 +674,22 @@ class QuestionPaperManager {
     }
 
     openPaper(paperId) {
-        console.log(`\n📖 openPaper() called with ID: ${paperId} (type: ${typeof paperId})`);
+        // Convert paperId to number for comparison
+        const numericPaperId = Number(paperId);
         
-        // Find paper using multiple comparison methods
-        let paper = this.papers.find(p => p.id === paperId);
-        
-        if (!paper) {
-            // Try string comparison
-            paper = this.papers.find(p => String(p.id) === String(paperId));
-        }
+        const paper = this.papers.find(p => Number(p.id) === numericPaperId);
         
         if (!paper) {
-            // Try numeric comparison
-            paper = this.papers.find(p => Number(p.id) === Number(paperId));
-        }
-        
-        if (!paper) {
-            console.error('❌ FAILED TO OPEN PAPER');
-            console.error(`   Requested ID: ${paperId}`);
-            console.error(`   Available IDs:`, this.papers.map(p => p.id));
+            console.error('Paper not found:', paperId);
+            this.showNotification('Document not found!', 'error');
+            
+            // Remove paperId from URL and redirect to homepage
+            const url = new URL(window.location);
+            url.searchParams.delete('paperId');
+            window.history.replaceState({}, '', url);
             return;
         }
 
-        console.log(`✅ Opening: "${paper.subject}"`);
-        
         this.currentViewing = paper;
         this.currentPageIndex = 0;
         this.zoomLevel = 1;
@@ -730,18 +702,15 @@ class QuestionPaperManager {
         
         // Update URL without reloading page for sharing
         const url = new URL(window.location);
-        url.searchParams.set('paperId', paper.id);
+        url.searchParams.set('paperId', paperId);
         window.history.pushState({}, '', url);
-        
-        console.log('✅ Paper viewer opened successfully\n');
     }
     
     shareOnWhatsApp() {
         if (!this.currentViewing) return;
         
-        // Use clean URL without pathname to ensure it works on Vercel
-        const shareUrl = `${window.location.origin}/?paperId=${this.currentViewing.id}`;
-        const message = `📚 *${this.currentViewing.subject}* - Previous Year Question Paper\n\n🔗 Open directly: ${shareUrl}\n\n✅ 100% FREE | No Login Required`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${this.currentViewing.id}`;
+        const message = `Check out this question paper: ${this.currentViewing.subject}\n\n${shareUrl}`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
@@ -751,81 +720,103 @@ class QuestionPaperManager {
         const paper = this.papers.find(p => p.id === paperId);
         if (!paper) return;
         
-        // Use clean URL without pathname to ensure it works on Vercel
-        const shareUrl = `${window.location.origin}/?paperId=${paperId}`;
-        const message = `📚 *${paper.subject}* - Previous Year Question Paper\n\n🔗 Open directly: ${shareUrl}\n\n✅ 100% FREE | No Login Required`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?paperId=${paperId}`;
+        const message = `Check out this question paper: ${paper.subject}\n\n${shareUrl}`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         
         window.open(whatsappUrl, '_blank');
     }
     
-    // Open paper from shared URL (called AFTER papers are loaded)
-    openPaperFromUrl(urlPaperId) {
-        console.log('\n🎯 ATTEMPTING TO OPEN PAPER FROM SHARED LINK');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    checkUrlForPaper() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paperId = urlParams.get('paperId');
         
-        if (!this.papers || this.papers.length === 0) {
-            console.error('❌ CRITICAL: No papers loaded!');
-            console.log('💡 Database might be empty or connection failed');
-            alert('⚠️ No papers found in database. Please check your connection.');
-            return;
+        if (paperId) {
+            console.log('📄 Opening paper from URL:', paperId);
+            
+            // Check if papers are loaded
+            if (this.papers.length === 0) {
+                console.warn('⚠️ No papers loaded yet, waiting...');
+                
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (this.papers.length > 0) {
+                        this.openPaper(paperId);
+                    } else {
+                        console.error('❌ No papers available');
+                        this.showNotification('No papers available. Please try again later.', 'error');
+                        
+                        // Clean URL and redirect to homepage
+                        const url = new URL(window.location);
+                        url.searchParams.delete('paperId');
+                        window.history.replaceState({}, '', url);
+                    }
+                }, 1000);
+                return;
+            }
+            
+            // Papers are loaded, try to open
+            this.openPaper(paperId);
         }
-        
-        console.log(`✅ Papers loaded: ${this.papers.length} total`);
-        console.log('\n🔍 SEARCHING FOR PAPER...');
-        console.log(`Target ID from URL: "${urlPaperId}" (type: ${typeof urlPaperId})`);
-        
-        // Log all available papers
-        console.log('\n📚 Available papers in database:');
-        this.papers.forEach((p, index) => {
-            console.log(`  ${index + 1}. ID: ${p.id} (type: ${typeof p.id}) - ${p.subject}`);
-        });
-        
-        // Try multiple matching strategies
-        let foundPaper = null;
-        
-        // Strategy 1: Direct string comparison
-        foundPaper = this.papers.find(p => String(p.id) === String(urlPaperId));
-        if (foundPaper) {
-            console.log('\n✅ MATCH FOUND (String comparison)!');
-        }
-        
-        // Strategy 2: Numeric comparison
-        if (!foundPaper) {
-            const urlIdNum = Number(urlPaperId);
-            foundPaper = this.papers.find(p => Number(p.id) === urlIdNum);
-            if (foundPaper) {
-                console.log('\n✅ MATCH FOUND (Numeric comparison)!');
+    }
+    
+    showNotification(message, type = 'info') {
+        // Create notification element if it doesn't exist
+        let notification = document.getElementById('notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                animation: slideIn 0.3s ease-out;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            document.body.appendChild(notification);
+            
+            // Add animation styles
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(400px); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(400px); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
             }
         }
         
-        // Strategy 3: Loose equality
-        if (!foundPaper) {
-            foundPaper = this.papers.find(p => p.id == urlPaperId);
-            if (foundPaper) {
-                console.log('\n✅ MATCH FOUND (Loose comparison)!');
-            }
-        }
+        // Set background color based on type
+        const colors = {
+            success: '#4CAF50',
+            error: '#f44336',
+            warning: '#ff9800',
+            info: '#2196F3'
+        };
+        notification.style.backgroundColor = colors[type] || colors.info;
+        notification.textContent = message;
+        notification.style.display = 'block';
         
-        if (foundPaper) {
-            console.log(`🎉 Paper found: "${foundPaper.subject}"`);
-            console.log(`📄 Total pages: ${foundPaper.totalPages || foundPaper.pages?.length || 'Unknown'}`);
-            console.log('\n🚀 Opening paper viewer...');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-            
-            // Open the paper immediately
-            setTimeout(() => this.openPaper(foundPaper.id), 100);
-        } else {
-            console.error('\n❌ PAPER NOT FOUND!');
-            console.error(`The ID "${urlPaperId}" does not match any paper in database`);
-            console.log('\n💡 Possible reasons:');
-            console.log('   1. Paper was deleted from database');
-            console.log('   2. Paper ID changed during migration');
-            console.log('   3. Database connection issue');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-            
-            alert(`⚠️ Paper not found!\n\nThe shared link is for paper ID: ${urlPaperId}\n\nBut this paper is not in the database.\n\nAvailable papers: ${this.papers.length}`);
-        }
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 300);
+        }, 4000);
     }
 
     updateViewer() {
