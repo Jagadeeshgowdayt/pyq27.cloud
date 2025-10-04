@@ -29,14 +29,32 @@ class QuestionPaperManager {
         this.checkUrlForPaper();
     }
     
-    // Load papers from Supabase database
+    // Load papers - try localStorage first, then Supabase as backup
     async loadPapersFromDB() {
         try {
-            console.log('📥 Loading papers from Supabase database...');
+            console.log('📥 Loading papers...');
             
-            // Wait for all dependencies to be available
+            // FIRST: Try localStorage (fastest and most reliable)
+            const localPapers = localStorage.getItem('questionPapers');
+            if (localPapers) {
+                try {
+                    this.papers = JSON.parse(localPapers);
+                    console.log(`✅ Loaded ${this.papers.length} papers from localStorage`);
+                    
+                    // If we have papers in localStorage, we're good to go!
+                    if (this.papers.length > 0) {
+                        return;
+                    }
+                } catch (parseError) {
+                    console.warn('⚠️ Error parsing localStorage, trying database...', parseError);
+                }
+            }
+            
+            console.log('📥 localStorage empty or invalid, trying Supabase database...');
+            
+            // SECOND: Try Supabase database (as backup)
             let retries = 0;
-            const maxRetries = 10;
+            const maxRetries = 5; // Reduced retries since localStorage is primary
             
             while ((typeof window.supabasePapersDB === 'undefined' || !window.supabasePapersDB) && retries < maxRetries) {
                 console.warn(`⚠️ Supabase DB not loaded yet, waiting... (${retries + 1}/${maxRetries})`);
@@ -46,38 +64,28 @@ class QuestionPaperManager {
                     initSupabasePapersDB();
                 }
                 
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, 200));
                 retries++;
             }
             
-            if (typeof window.supabasePapersDB === 'undefined' || !window.supabasePapersDB) {
-                throw new Error('SupabasePapersDB failed to load after 3 seconds');
-            }
-            
-            console.log('✅ Supabase DB helper loaded, fetching papers...');
-            this.papers = await window.supabasePapersDB.getAllPapers();
-            console.log(`✅ Loaded ${this.papers.length} papers from database`);
-            
-            // Also sync to localStorage for offline access
-            if (this.papers.length > 0) {
-                localStorage.setItem('questionPapers', JSON.stringify(this.papers));
-                console.log(`💾 Synced ${this.papers.length} papers to localStorage`);
-            }
-            
-            // If no papers in DB, check localStorage
-            if (this.papers.length === 0) {
-                const localPapers = localStorage.getItem('questionPapers');
-                if (localPapers) {
-                    this.papers = JSON.parse(localPapers);
-                    console.log(`⚠️ Using ${this.papers.length} papers from localStorage (database is empty)`);
-                } else {
-                    console.warn('⚠️ No papers in database or localStorage');
+            if (typeof window.supabasePapersDB !== 'undefined' && window.supabasePapersDB) {
+                console.log('✅ Supabase DB helper loaded, fetching papers...');
+                const dbPapers = await window.supabasePapersDB.getAllPapers();
+                console.log(`✅ Loaded ${dbPapers.length} papers from database`);
+                
+                if (dbPapers.length > 0) {
+                    this.papers = dbPapers;
+                    // Sync to localStorage for next time
+                    localStorage.setItem('questionPapers', JSON.stringify(this.papers));
+                    console.log(`💾 Synced ${this.papers.length} papers to localStorage`);
                 }
+            } else {
+                console.warn('⚠️ Supabase DB failed to load, but localStorage papers should work');
             }
+            
         } catch (error) {
-            console.error('❌ Failed to load papers from database:', error);
+            console.error('❌ Failed to load papers:', error);
             console.log('🔍 Error details:', error.message);
-            console.log('🔍 Error stack:', error.stack);
             
             // Fallback to localStorage
             const localPapers = localStorage.getItem('questionPapers');
