@@ -17,12 +17,15 @@ class QuestionPaperManager {
         this.setupProtection();
         
         // Load papers from Supabase database
+        console.log('🚀 Starting init() - Loading papers...');
         await this.loadPapersFromDB();
+        console.log(`✅ After loadPapersFromDB() - Papers count: ${this.papers.length}`);
         
         this.renderPapers();
         this.populateFilters();
         
         // Check URL AFTER papers are loaded
+        console.log(`📄 About to check URL - Papers available: ${this.papers.length}`);
         this.checkUrlForPaper();
     }
     
@@ -733,6 +736,11 @@ class QuestionPaperManager {
         
         if (paperId) {
             console.log('📄 Opening paper from URL:', paperId);
+            console.log('📊 Current papers array:', this.papers);
+            console.log('📊 Papers count:', this.papers.length);
+            if (this.papers.length > 0) {
+                console.log('📊 Available paper IDs:', this.papers.map(p => `${p.id} (${typeof p.id})`));
+            }
             
             // Improved retry logic with multiple attempts
             let attempts = 0;

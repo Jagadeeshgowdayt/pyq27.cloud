@@ -259,7 +259,15 @@ class SupabasePapersDB {
 let supabasePapersDB;
 
 function initSupabasePapersDB() {
-    if (typeof supabase === 'undefined') {
+    // First ensure supabase client is initialized
+    if (typeof supabase === 'undefined' || !supabase) {
+        console.warn('⚠️ Supabase client not ready, trying to initialize...');
+        if (typeof initSupabaseClient === 'function') {
+            initSupabaseClient();
+        }
+    }
+    
+    if (typeof supabase === 'undefined' || !supabase) {
         console.error('❌ Cannot initialize SupabasePapersDB: supabase client not loaded');
         return null;
     }
@@ -273,7 +281,10 @@ function initSupabasePapersDB() {
 }
 
 // Try to initialize immediately if supabase is already loaded
-if (typeof supabase !== 'undefined') {
+if (typeof supabase !== 'undefined' && supabase) {
     supabasePapersDB = new SupabasePapersDB();
     console.log('✅ SupabasePapersDB initialized on load');
+} else {
+    console.warn('⚠️ Supabase not ready yet, SupabasePapersDB will initialize later');
 }
+

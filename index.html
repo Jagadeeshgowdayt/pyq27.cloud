@@ -20,11 +20,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Supabase Client - defer loading -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="js/supabase-config.js"></script>
-    <script defer src="js/supabase-storage.js"></script>
-    <script defer src="js/supabase-papers-db.js"></script>
+    <!-- Supabase Client - Load synchronously to ensure it's available -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-storage.js"></script>
+    <script src="js/supabase-papers-db.js"></script>
 </head>
 <body>
     <!-- Header -->
