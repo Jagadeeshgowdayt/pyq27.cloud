@@ -154,6 +154,26 @@
         </div>
     </footer>
 
-    <script defer src="js/main.js"></script>
+    <script>
+        // Wait for Supabase to be fully initialized before loading main.js
+        function waitForSupabaseReady() {
+            if (window.supabasePapersDB) {
+                console.log('✅ Supabase ready, loading main.js...');
+                const script = document.createElement('script');
+                script.src = 'js/main.js';
+                document.head.appendChild(script);
+            } else {
+                console.log('⏳ Waiting for Supabase...');
+                setTimeout(waitForSupabaseReady, 100);
+            }
+        }
+        
+        // Start checking when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', waitForSupabaseReady);
+        } else {
+            waitForSupabaseReady();
+        }
+    </script>
 </body>
 </html>

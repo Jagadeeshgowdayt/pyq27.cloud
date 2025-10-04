@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Paper Viewer</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #222; color: #fff; }
+        .paper { margin: 20px 0; padding: 20px; background: #333; border-radius: 10px; }
+        img { max-width: 100%; height: auto; margin: 10px 0; }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+    </style>
+</head>
+<body>
+    <h1>📄 Minimal Paper Viewer</h1>
+    <div id="status">Loading...</div>
+    <div id="content"></div>
+
+    <script>
+        const status = document.getElementById('status');
+        const content = document.getElementById('content');
+        
+        function log(msg, type = 'info') {
+            console.log(msg);
+            status.innerHTML += `<div class="${type}">${msg}</div>`;
+        }
+
+        // Get URL parameter
+        const params = new URLSearchParams(window.location.search);
+        const paperId = params.get('paperId');
+        
+        if (!paperId) {
+            log('❌ No paperId in URL', 'error');
+            log('Usage: ?paperId=1759527574076', 'info');
+        } else {
+            log(`📋 Looking for paper: ${paperId}`, 'info');
+            
+            // Check localStorage first (this should work)
+            const stored = localStorage.getItem('questionPapers');
+            if (stored) {
+                try {
+                    const papers = JSON.parse(stored);
+                    log(`✅ Found ${papers.length} papers in localStorage`, 'success');
+                    
+                    // Find the paper
+                    const paper = papers.find(p => String(p.id) === String(paperId));
+                    if (paper) {
+                        log(`✅ Found paper: ${paper.subject}`, 'success');
+                        
+                        // Display the paper
+                        content.innerHTML = `
+                            <div class="paper">
+                                <h2>${paper.subject}</h2>
+                                <p><strong>ID:</strong> ${paper.id}</p>
+                                <p><strong>Pages:</strong> ${paper.pages ? paper.pages.length : 0}</p>
+                                ${paper.pages ? paper.pages.map((page, i) => 
+                                    `<img src="${page}" alt="Page ${i+1}" />`
+                                ).join('') : '<p>No pages available</p>'}
+                            </div>
+                        `;
+                    } else {
+                        log(`❌ Paper ${paperId} not found`, 'error');
+                        log(`Available IDs: ${papers.map(p => p.id).join(', ')}`, 'info');
+                    }
+                } catch (e) {
+                    log(`❌ Error parsing localStorage: ${e.message}`, 'error');
+                }
+            } else {
+                log('❌ No papers in localStorage', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
